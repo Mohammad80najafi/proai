@@ -6,6 +6,7 @@ import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Topbar } from "@/components/layout/topbar";
 import { mobileNavigation, primaryNavigation } from "@/components/layout/navigation";
+import { cn } from "@/components/ui/cn";
 import { RealtimeProvider, useRealtime } from "@/features/chat/realtime-provider";
 
 export type AppShellUser = {
@@ -46,6 +47,7 @@ function AppShellContent({
 }) {
   const pathname = usePathname();
   const { unreadConversationCount, notificationCount } = useRealtime();
+  const messagesWorkspace = pathname === "/messages";
   const messageCount = user ? unreadConversationCount : 0;
   const visibleNotificationCount = user ? notificationCount : 0;
   const desktopItems = primaryNavigation.map((item) =>
@@ -60,7 +62,7 @@ function AppShellContent({
   );
 
   return (
-    <div className="min-h-screen">
+    <div className={cn("min-h-screen", messagesWorkspace && "h-dvh overflow-hidden")}>
       <DesktopSidebar activePath={pathname} items={desktopItems} user={user} />
       <Topbar
         user={user}
@@ -68,8 +70,22 @@ function AppShellContent({
         messageCount={messageCount}
         sidebarOffset
       />
-      <main className="min-w-0 pb-24 lg:ms-64 lg:pb-10">
-        <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 xl:px-8">
+      <main
+        className={cn(
+          "min-w-0 lg:ms-64",
+          messagesWorkspace
+            ? "h-[calc(100dvh-8.25rem-env(safe-area-inset-bottom))] overflow-hidden lg:h-[calc(100dvh-4rem)]"
+            : "pb-24 lg:pb-10",
+        )}
+      >
+        <div
+          className={cn(
+            "mx-auto w-full",
+            messagesWorkspace
+              ? "h-full max-w-none p-2 sm:p-3 lg:p-4 xl:p-5"
+              : "max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8 xl:px-8",
+          )}
+        >
           {children}
         </div>
       </main>
