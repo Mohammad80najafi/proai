@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Topbar } from "@/components/layout/topbar";
+import { mobileNavigation, primaryNavigation } from "@/components/layout/navigation";
+import { RealtimeProvider, useRealtime } from "@/features/chat/realtime-provider";
 
 export type AppShellUser = {
   displayName: string;
@@ -16,22 +18,53 @@ export type AppShellUser = {
 export function AppShell({
   children,
   user,
-  notificationCount = 0,
-  messageCount = 0,
+  initialUnreadConversationIds = [],
+  initialNotificationCount = 0,
 }: {
   children: React.ReactNode;
   user?: AppShellUser;
-  notificationCount?: number;
-  messageCount?: number;
+  initialUnreadConversationIds?: string[];
+  initialNotificationCount?: number;
+}) {
+  return (
+    <RealtimeProvider
+      enabled={Boolean(user)}
+      initialUnreadConversationIds={initialUnreadConversationIds}
+      initialNotificationCount={initialNotificationCount}
+    >
+      <AppShellContent user={user}>{children}</AppShellContent>
+    </RealtimeProvider>
+  );
+}
+
+function AppShellContent({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  user?: AppShellUser;
 }) {
   const pathname = usePathname();
+  const { unreadConversationCount, notificationCount } = useRealtime();
+  const messageCount = user ? unreadConversationCount : 0;
+  const visibleNotificationCount = user ? notificationCount : 0;
+  const desktopItems = primaryNavigation.map((item) =>
+    item.href === "/messages"
+      ? { ...item, badge: messageCount || undefined }
+      : item,
+  );
+  const mobileItems = mobileNavigation.map((item) =>
+    item.href === "/messages"
+      ? { ...item, badge: messageCount || undefined }
+      : item,
+  );
 
   return (
     <div className="min-h-screen">
-      <DesktopSidebar activePath={pathname} user={user} />
+      <DesktopSidebar activePath={pathname} items={desktopItems} user={user} />
       <Topbar
         user={user}
-        notificationCount={notificationCount}
+        notificationCount={visibleNotificationCount}
         messageCount={messageCount}
         sidebarOffset
       />
@@ -40,7 +73,7 @@ export function AppShell({
           {children}
         </div>
       </main>
-      <MobileNav activePath={pathname} />
+      <MobileNav activePath={pathname} items={mobileItems} />
     </div>
   );
 }

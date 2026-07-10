@@ -9,6 +9,12 @@ import { Notification } from "@/models/Notification";
 import { User } from "@/models/User";
 import type { ChatMessage, ChatUser } from "@/features/chat/types";
 
+export type SendMessageResult = {
+  message: ChatMessage;
+  recipientIds: string[];
+  created: boolean;
+};
+
 function publicUser(value: {
   _id: unknown;
   username: string;
@@ -39,7 +45,7 @@ export async function sendMessage({
   senderId: string;
   content: string;
   clientNonce?: string | null;
-}): Promise<ChatMessage> {
+}): Promise<SendMessageResult> {
   if (!Types.ObjectId.isValid(conversationId) || !Types.ObjectId.isValid(senderId)) {
     throw new Error("Invalid conversation");
   }
@@ -72,7 +78,7 @@ export async function sendMessage({
   }
 
   const database = await connectToDatabase();
-  let result: ChatMessage | null = null;
+  let result: SendMessageResult | null = null;
 
   await database.connection.transaction(async (session) => {
     // Validate the conversation and its complete active membership before any
@@ -121,13 +127,17 @@ export async function sendMessage({
       }).session(session);
       if (existing) {
         result = {
-          id: String(existing._id),
-          conversationId,
-          content: existing.content,
-          createdAt: existing.createdAt.toISOString(),
-          sender: publicUser(sender),
-          own: true,
-          clientNonce: existing.clientNonce ?? null,
+          message: {
+            id: String(existing._id),
+            conversationId,
+            content: existing.content,
+            createdAt: existing.createdAt.toISOString(),
+            sender: publicUser(sender),
+            own: true,
+            clientNonce: existing.clientNonce ?? null,
+          },
+          recipientIds,
+          created: false,
         };
         return;
       }
@@ -191,13 +201,17 @@ export async function sendMessage({
     );
 
     result = {
-      id: String(messageId),
-      conversationId,
-      content: clean,
-      createdAt: now.toISOString(),
-      sender: publicUser(sender),
-      own: true,
-      clientNonce: cleanNonce,
+      message: {
+        id: String(messageId),
+        conversationId,
+        content: clean,
+        createdAt: now.toISOString(),
+        sender: publicUser(sender),
+        own: true,
+        clientNonce: cleanNonce,
+      },
+      recipientIds,
+      created: true,
     };
   });
 

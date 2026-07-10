@@ -30,6 +30,29 @@ export async function getConversationList(userId: string): Promise<ChatConversat
   return conversations.flatMap((item) => { const participant = userMap.get(memberMap.get(String(item._id)) ?? ""); return participant ? [{ id: String(item._id), participant, lastMessage: messageMap.get(String(item.lastMessageId)) ?? "گفت‌وگوی تازه", lastMessageAt: (item.lastMessageAt ?? new Date(0)).toISOString(), unreadCount: unreadMap.get(String(item._id)) ?? 0, online: false }] : []; });
 }
 
+export async function getUnreadConversationIds(userId: string): Promise<string[]> {
+  await connectToDatabase();
+  const memberships = await ConversationMember.find({
+    userId,
+    leftAt: null,
+    archivedAt: null,
+    unreadCount: { $gt: 0 },
+  })
+    .select("conversationId")
+    .lean<Array<{ conversationId: unknown }>>();
+  if (!memberships.length) return [];
+
+  const conversations = await Conversation.find({
+    _id: { $in: memberships.map((item) => item.conversationId) },
+    type: "direct",
+    closedAt: null,
+  })
+    .select("_id")
+    .lean<Array<{ _id: unknown }>>();
+
+  return conversations.map((conversation) => String(conversation._id));
+}
+
 export async function getConversationMessages(conversationId: string, userId: string, limit = 80): Promise<{ participant: ChatUser; messages: ChatMessage[] } | null> {
   if (!Types.ObjectId.isValid(conversationId)) return null;
   await connectToDatabase();

@@ -64,6 +64,11 @@ export async function getNotifications(userId: string): Promise<NotificationDTO[
   return rows.map((item) => ({ id: String(item._id), type: notificationType(item.type), actor: item.actorId ? actorMap.get(String(item.actorId)) ?? null : null, title: item.title, description: item.body, href: item.href, read: Boolean(item.readAt), createdAt: item.createdAt.toISOString() }));
 }
 
+export async function getUnreadNotificationCount(userId: string): Promise<number> {
+  await connectToDatabase();
+  return Notification.countDocuments({ recipientId: userId, readAt: null });
+}
+
 export async function getLeaderboard(limit = 20) {
   await connectToDatabase();
   return User.find({ accountStatus: "active" }).sort({ reputationScore: -1 }).limit(limit).select("username displayName avatar bio rank reputationScore stats").lean<Array<RawUser>>();

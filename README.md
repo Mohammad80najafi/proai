@@ -75,7 +75,7 @@ The supplied Docker service runs a single-node replica set and publishes MongoDB
 6. Start the web application and realtime gateway together.
 
    ```powershell
-   npm run dev:all
+   npm run dev
    ```
 
 Open [http://localhost:3000](http://localhost:3000). The realtime health endpoint is available at [http://localhost:3001/health](http://localhost:3001/health).
@@ -151,7 +151,7 @@ OLLAMA_MODEL=qwen3:8b
 
 ## Realtime messaging
 
-`npm run dev:all` starts two processes:
+`npm run dev` starts two processes:
 
 - Next.js web server on port `3000`
 - Authenticated Socket.IO gateway on port `3001`
@@ -175,9 +175,11 @@ npm run realtime
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Start only the Next.js development server |
+| `npm run dev` | Start the complete web and realtime development stack |
+| `npm run dev:web` | Start only the Next.js development server |
 | `npm run dev:realtime` | Start only the realtime gateway |
-| `npm run dev:all` | Start web and realtime development processes |
+| `npm run dev:all` | Explicit alias for the complete development stack |
+| `npm run realtime` | Start the standalone realtime gateway |
 | `npm run db:up` | Start local MongoDB with Docker Compose |
 | `npm run db:down` | Stop the Docker services while preserving the named data volume |
 | `npm run seed` | Upsert Persian demo content, users, and collaboration data |

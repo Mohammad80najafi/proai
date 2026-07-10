@@ -4,6 +4,7 @@ import { Server, type Socket } from "socket.io";
 import { z } from "zod";
 
 import { isConversationMember, markConversationRead, sendMessage } from "../features/chat/service";
+import type { ChatMessageNotification, ConversationReadEvent } from "../features/chat/types";
 import { SESSION_COOKIE_NAME } from "../lib/auth/constants";
 import { validateSessionToken } from "../lib/auth/session-validation";
 
@@ -233,6 +234,9 @@ io.on("connection", (socket) => {
           if (allowed) {
             await socket.join(`conversation:${conversationId}`);
             await markConversationRead(conversationId, userId);
+            io.to(`user:${userId}`).emit("conversation:read", {
+              conversationId,
+            } satisfies ConversationReadEvent);
           }
           acknowledge<JoinAcknowledgement>(acknowledgementCandidate, {
             ok: allowed,
@@ -245,6 +249,27 @@ io.on("connection", (socket) => {
       );
     },
   );
+
+  socket.on("conversation:leave", (payload: unknown) => {
+    runSocketTask("conversation:leave", async () => {
+      const parsed = conversationPayloadSchema.safeParse(payload);
+      if (!parsed.success) return;
+      await socket.leave(`conversation:${parsed.data.conversationId}`);
+    });
+  });
+
+  socket.on("conversation:read", (payload: unknown) => {
+    runSocketTask("conversation:read", async () => {
+      const parsed = conversationPayloadSchema.safeParse(payload);
+      if (!parsed.success || !(await revalidateSession())) return;
+      if (!(await isConversationMember(parsed.data.conversationId, userId))) return;
+
+      await markConversationRead(parsed.data.conversationId, userId);
+      io.to(`user:${userId}`).emit("conversation:read", {
+        conversationId: parsed.data.conversationId,
+      } satisfies ConversationReadEvent);
+    });
+  });
 
   socket.on("typing", (payload: unknown) => {
     runSocketTask("typing", async () => {
@@ -289,19 +314,27 @@ io.on("connection", (socket) => {
             return;
           }
 
-          const message = await sendMessage({
+          const delivery = await sendMessage({
             conversationId: parsed.data.conversationId,
             senderId: userId,
             content: parsed.data.content,
             clientNonce: parsed.data.clientNonce,
           });
-          io.to(`conversation:${parsed.data.conversationId}`).emit(
-            "message:new",
-            message,
-          );
+          if (delivery.created) {
+            io.to(`conversation:${parsed.data.conversationId}`).emit(
+              "message:new",
+              delivery.message,
+            );
+            for (const recipientId of delivery.recipientIds) {
+              io.to(`user:${recipientId}`).emit("message:notification", {
+                message: delivery.message,
+                href: `/messages?conversation=${parsed.data.conversationId}`,
+              } satisfies ChatMessageNotification);
+            }
+          }
           acknowledge<MessageAcknowledgement>(acknowledgementCandidate, {
             ok: true,
-            message,
+            message: delivery.message,
           });
         },
         () =>

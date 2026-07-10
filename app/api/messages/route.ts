@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const message = await sendMessage({
+    const { message } = await sendMessage({
       conversationId: parsed.data.conversationId,
       senderId: user.id,
       content: parsed.data.content,
