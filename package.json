@@ -4,23 +4,59 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:realtime": "node --conditions=react-server --import tsx realtime/server.ts",
+    "realtime": "node --conditions=react-server --import tsx realtime/server.ts",
+    "dev:all": "concurrently -k -n web,realtime -c blue,magenta \"npm:dev\" \"npm:dev:realtime\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit --incremental false",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "seed": "tsx scripts/seed.ts",
+    "db:up": "docker compose up -d mongodb",
+    "db:down": "docker compose down"
   },
   "dependencies": {
+    "@fontsource-variable/vazirmatn": "^5.2.8",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "jose": "^6.2.3",
+    "lucide-react": "^1.24.0",
+    "mongoose": "^9.7.4",
+    "motion": "^12.42.2",
     "next": "16.2.10",
+    "openai": "^6.46.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "rehype-sanitize": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "server-only": "^0.0.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@next/env": "^16.2.10",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "postcss": "8.5.16"
   }
 }

@@ -1,0 +1,83 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Braces, CalendarDays, GitFork, GitPullRequestArrow, History, MessageSquare, ShieldCheck, Star } from "lucide-react";
+
+import { PageHeader } from "@/components/layout/page-header";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Markdown } from "@/components/ui/markdown";
+import { CommentForm } from "@/features/content/comment-form";
+import { ContentActions } from "@/features/content/content-actions";
+import { CopyButton } from "@/features/content/copy-button";
+import { getComments, getPromptBySlug } from "@/features/content/data";
+import { getOptionalUser } from "@/lib/auth/dal";
+import { formatDate, formatRelativeDate } from "@/lib/format";
+
+type Props = { params: Promise<{ slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const prompt = await getPromptBySlug(slug).catch(() => null);
+  return prompt ? { title: prompt.title, description: prompt.description } : { title: "پرامپت" };
+}
+
+export default async function PromptDetailPage({ params }: Props) {
+  const { slug } = await params;
+  const user = await getOptionalUser().catch(() => null);
+  const prompt = await getPromptBySlug(slug, user?.id ?? null).catch(() => null);
+  if (!prompt) notFound();
+  const comments = await getComments("Prompt", prompt.id, user?.id ?? null).catch(() => []);
+
+  return (
+    <div className="space-y-7">
+      <PageHeader
+        breadcrumbs={[{ label: "پرامپت‌ها", href: "/prompts" }, { label: prompt.title }]}
+        eyebrow={<span className="inline-flex items-center gap-2"><Braces className="size-4" />{prompt.category}</span>}
+        title={prompt.title}
+        description={prompt.description}
+        meta={<><Badge variant="indigo">نسخه {prompt.version.toLocaleString("fa-IR")}</Badge><span className="text-xs text-faint">به‌روزرسانی {formatRelativeDate(prompt.updatedAt)}</span>{prompt.viewer.isOwner ? <Badge variant="green">مالک محتوا</Badge> : null}</>}
+        actions={<CopyButton value={prompt.content} />}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+        <div className="space-y-6">
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4"><h2 className="font-semibold">متن پرامپت</h2><span className="text-[10px] text-faint">Markdown</span></div>
+            <div className="p-5 sm:p-7"><Markdown>{prompt.content}</Markdown></div>
+          </Card>
+
+          <Card className="p-5 sm:p-6">
+            <div className="mb-5 flex items-center gap-2"><History className="size-4 text-primary" /><h2 className="font-semibold">تاریخچه نسخه‌ها</h2></div>
+            <div className="space-y-0">
+              {prompt.versions.map((version, index) => (
+                <div key={version.id} className="relative grid grid-cols-[28px_1fr] gap-3 pb-5 last:pb-0">
+                  <div className="relative flex justify-center"><span className={`mt-1.5 size-2.5 rounded-full ${index === 0 ? "bg-primary shadow-[0_0_0_5px_rgba(124,134,255,.12)]" : "bg-border-strong"}`} />{index < prompt.versions.length - 1 ? <span className="absolute bottom-0 top-4 w-px bg-border" /> : null}</div>
+                  <div><div className="flex flex-wrap items-center gap-2"><strong className="text-sm">نسخه {version.versionNumber.toLocaleString("fa-IR")}</strong><span className="text-[11px] text-faint">{formatDate(version.createdAt)}</span></div><p className="mt-1 text-xs leading-6 text-muted">{version.changes}</p><p className="mt-1 text-[11px] text-faint">توسط {version.author.displayName}</p></div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card id="comments" className="p-5 sm:p-6">
+            <div className="mb-5 flex items-center gap-2"><MessageSquare className="size-4 text-primary" /><h2 className="font-semibold">گفت‌وگو ({comments.length.toLocaleString("fa-IR")})</h2></div>
+            {user ? <CommentForm targetType="Prompt" targetId={prompt.id} /> : <p className="rounded-xl bg-white/[0.025] p-4 text-sm text-muted">برای نوشتن دیدگاه <Link href={`/login?next=/prompts/${slug}`} className="text-primary-strong">وارد شوید</Link>.</p>}
+            <div className="mt-6 divide-y divide-white/[0.06]">
+              {comments.map((comment) => <article key={comment.id} id={`comment-${comment.id}`} className="flex gap-3 py-5 first:pt-0 last:pb-0"><Avatar src={comment.author.avatar} fallback={comment.author.displayName} alt={comment.author.displayName} size="sm" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><Link href={`/users/${comment.author.username}`} className="text-sm font-semibold">{comment.author.displayName}</Link><span className="text-[10px] text-faint">{formatRelativeDate(comment.createdAt)}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300" dir="auto">{comment.content}</p></div></article>)}
+              {!comments.length ? <p className="py-5 text-center text-sm text-faint">هنوز دیدگاهی ثبت نشده است.</p> : null}
+            </div>
+          </Card>
+        </div>
+
+        <aside className="space-y-4 xl:sticky xl:top-24">
+          {prompt.viewer.isOwner && prompt.forkedFrom ? <Card className="border-primary/20 bg-primary-soft p-5"><p className="text-xs font-semibold text-primary-strong">این پرامپت یک فورک است</p><p className="mt-2 text-xs leading-6 text-muted">تغییرات را برای مالک «{prompt.forkedFrom.title}» بفرستید.</p><ButtonLink href={`/improvements/new?type=Prompt&targetId=${prompt.forkedFrom.targetId}&forkId=${prompt.id}&baseVersionId=${prompt.forkedFrom.baseVersionId}`} size="sm" className="mt-4" fullWidth><GitPullRequestArrow className="size-4" />ارسال پیشنهاد بهبود</ButtonLink></Card> : null}
+          <Card className="p-5"><ContentActions targetType="Prompt" targetId={prompt.id} liked={prompt.viewer.hasLiked} saved={prompt.viewer.hasSaved} rating={prompt.viewer.rating} likes={prompt.stats.likes} saves={prompt.stats.saves} forks={prompt.stats.forks} /></Card>
+          <Card className="p-5"><p className="mb-3 text-xs font-semibold text-faint">سازنده</p><Link href={`/users/${prompt.author.username}`} className="flex items-center gap-3"><Avatar src={prompt.author.avatar} fallback={prompt.author.displayName} alt={prompt.author.displayName} /><div><p className="text-sm font-semibold">{prompt.author.displayName}</p><p className="mt-1 text-[11px] text-faint" dir="ltr">@{prompt.author.username}</p></div></Link></Card>
+          <Card className="space-y-3 p-5 text-xs text-muted"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><Star className="size-4" />امتیاز جامعه</span><strong className="text-white">{prompt.stats.ratingAverage.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><GitFork className="size-4" />فورک‌ها</span><strong className="text-white">{prompt.stats.forks.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><CalendarDays className="size-4" />انتشار</span><strong className="text-white">{formatDate(prompt.createdAt)}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><ShieldCheck className="size-4" />مجوز</span><strong className="text-white">CC BY 4.0</strong></div></Card>
+        </aside>
+      </div>
+    </div>
+  );
+}

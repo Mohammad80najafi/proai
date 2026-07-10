@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # debug
 npm-debug.log*
@@ -30,8 +32,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files (keep secrets local, commit the documented template)
 .env*
+!.env.example
 
 # vercel
 .vercel
