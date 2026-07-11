@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -15,7 +16,9 @@ import {
   Circle,
   LoaderCircle,
   MessageCircle,
+  ImagePlus,
   Send,
+  X,
 } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
@@ -54,6 +57,13 @@ export function ChatClient({
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
   const [text, setText] = useState("");
+  const [selectedImage, setSelectedImage] = useState<{
+    file: File;
+    preview: string;
+    width: number | null;
+    height: number | null;
+  } | null>(null);
+  const [composerError, setComposerError] = useState("");
   const [joined, setJoined] = useState(false);
   const [typing, setTyping] = useState(false);
   const [sending, setSending] = useState(false);
@@ -66,6 +76,7 @@ export function ChatClient({
   const participantOnline = isUserOnline(participant.id);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   const initialScrollRef = useRef(true);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -175,15 +186,71 @@ export function ChatClient({
     element.style.height = `${Math.min(element.scrollHeight, 128)}px`;
   }
 
+  function clearSelectedImage() {
+    if (selectedImage) URL.revokeObjectURL(selectedImage.preview);
+    setSelectedImage(null);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+  }
+
+  function selectImage(file: File | undefined) {
+    setComposerError("");
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setComposerError("فقط تصویر PNG، JPEG یا WebP قابل ارسال است.");
+      return;
+    }
+    if (file.size > 5_000_000) {
+      setComposerError("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
+      return;
+    }
+    if (selectedImage) URL.revokeObjectURL(selectedImage.preview);
+    const preview = URL.createObjectURL(file);
+    setSelectedImage({ file, preview, width: null, height: null });
+    const probe = document.createElement("img");
+    probe.onload = () => {
+      setSelectedImage((current) => current?.preview === preview
+        ? { ...current, width: probe.naturalWidth, height: probe.naturalHeight }
+        : current);
+    };
+    probe.src = preview;
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const content = text.trim();
-    if (!content || sending) return;
+    if ((!content && !selectedImage) || sending) return;
+    setComposerError("");
+    setSending(true);
+    let image: ChatMessage["image"] = null;
+    if (selectedImage) {
+      try {
+        const formData = new FormData();
+        formData.set("conversationId", conversationId);
+        formData.set("image", selectedImage.file);
+        const uploadResponse = await fetch("/api/messages/images", {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadResponse.ok) throw new Error("upload failed");
+        const uploaded = (await uploadResponse.json()) as { url?: string };
+        if (!uploaded.url) throw new Error("upload failed");
+        image = {
+          url: uploaded.url,
+          width: selectedImage.width,
+          height: selectedImage.height,
+        };
+      } catch {
+        setComposerError("ارسال تصویر انجام نشد. دوباره تلاش کنید.");
+        setSending(false);
+        return;
+      }
+    }
     const nonce = crypto.randomUUID();
     const optimistic: ChatMessage = {
       id: `pending:${nonce}`,
       conversationId,
       content,
+      image,
       createdAt: new Date().toISOString(),
       sender: null,
       own: true,
@@ -191,16 +258,20 @@ export function ChatClient({
     };
     setMessages((items) => [...items, optimistic]);
     setText("");
-    setSending(true);
+    clearSelectedImage();
     if (textareaRef.current) textareaRef.current.style.height = "auto";
     socket?.emit("typing", { conversationId, active: false });
     if (socket?.connected && joined) {
       socket.emit(
         "message:send",
-        { conversationId, content, clientNonce: nonce },
+        { conversationId, content, image, clientNonce: nonce },
         (ack: { ok: boolean; message?: ChatMessage }) => {
           if (ack.ok && ack.message)
             setMessages((items) => upsert(items, ack.message!, currentUserId));
+          if (!ack.ok) {
+            setMessages((items) => items.filter((item) => item.clientNonce !== nonce));
+            setComposerError("ارسال پیام انجام نشد. دوباره تلاش کنید.");
+          }
           setSending(false);
         },
       );
@@ -209,11 +280,15 @@ export function ChatClient({
         const response = await fetch("/api/messages", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ conversationId, content, clientNonce: nonce }),
+          body: JSON.stringify({ conversationId, content, image, clientNonce: nonce }),
         });
+        if (!response.ok) throw new Error("send failed");
         const data = (await response.json()) as { message?: ChatMessage };
         if (data.message)
           setMessages((items) => upsert(items, data.message!, currentUserId));
+      } catch {
+        setMessages((items) => items.filter((item) => item.clientNonce !== nonce));
+        setComposerError("ارسال پیام انجام نشد. دوباره تلاش کنید.");
       } finally {
         setSending(false);
       }
@@ -286,9 +361,27 @@ export function ChatClient({
               className={`flex ${message.own ? "justify-start" : "justify-end"}`}>
               <div
                 className={`max-w-[86%] rounded-2xl px-4 py-2.5 text-sm leading-7 shadow-sm sm:max-w-[72%] ${message.own ? "rounded-tr-md bg-primary text-white shadow-indigo-950/20" : "rounded-tl-md border border-white/[0.08] bg-white/[0.055] text-slate-200"}`}>
-                <p className="whitespace-pre-wrap" dir="auto">
-                  {message.content}
-                </p>
+                {message.image ? (
+                  <a
+                    href={message.image.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mb-1 block overflow-hidden rounded-xl outline-none ring-white/50 focus-visible:ring-2">
+                    <Image
+                      src={message.image.url}
+                      alt={message.content || "تصویر ارسالی"}
+                      width={message.image.width ?? 960}
+                      height={message.image.height ?? 720}
+                      unoptimized
+                      className="max-h-[28rem] w-auto max-w-full object-contain"
+                    />
+                  </a>
+                ) : null}
+                {message.content ? (
+                  <p className="whitespace-pre-wrap" dir="auto">
+                    {message.content}
+                  </p>
+                ) : null}
                 <span
                   className={`mt-1 flex items-center justify-end gap-1 text-[11px] tabular-nums ${message.own ? "text-white/65" : "text-faint"}`}>
                   {formatRelativeDate(message.createdAt)}
@@ -316,10 +409,48 @@ export function ChatClient({
         onSubmit={submit}
         className="shrink-0 border-t border-white/[0.07] bg-[#0b101a]/95 px-3 py-3 backdrop-blur-xl sm:px-5">
         <div className="mx-auto w-full max-w-4xl">
+          {selectedImage ? (
+            <div className="mb-2 flex items-center gap-3 rounded-xl border border-white/[0.1] bg-white/[0.045] p-2">
+              <Image
+                src={selectedImage.preview}
+                alt="پیش‌نمایش تصویر انتخاب‌شده"
+                width={72}
+                height={72}
+                unoptimized
+                className="size-16 rounded-lg object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium text-slate-200" dir="auto">{selectedImage.file.name}</p>
+                <p className="mt-1 text-[10px] text-faint">{(selectedImage.file.size / 1_000_000).toLocaleString("fa-IR", { maximumFractionDigits: 1 })} مگابایت</p>
+              </div>
+              <button
+                type="button"
+                onClick={clearSelectedImage}
+                className="grid size-9 shrink-0 place-items-center rounded-lg text-muted outline-none transition-colors hover:bg-white/[0.07] hover:text-white focus-visible:ring-2 focus-visible:ring-primary/70"
+                aria-label="حذف تصویر انتخاب‌شده">
+                <X className="size-4" />
+              </button>
+            </div>
+          ) : null}
           <label htmlFor="message-composer" className="sr-only">
             متن پیام
           </label>
           <div className="flex items-end gap-2">
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              onChange={(event) => selectImage(event.target.files?.[0])}
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={sending}
+              className="grid size-11 shrink-0 place-items-center rounded-xl border border-white/[0.1] bg-[#080d16] text-muted outline-none transition-colors hover:border-white/[0.18] hover:text-primary-strong focus-visible:ring-2 focus-visible:ring-primary/70 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="افزودن تصویر">
+              <ImagePlus className="size-4" />
+            </button>
             <textarea
               ref={textareaRef}
               id="message-composer"
@@ -342,7 +473,7 @@ export function ChatClient({
               type="submit"
               size="icon"
               className="size-11"
-              disabled={!text.trim() || sending}
+              disabled={(!text.trim() && !selectedImage) || sending}
               aria-label="ارسال پیام">
               {sending ? (
                 <LoaderCircle className="size-4 animate-spin motion-reduce:animate-none" />
@@ -351,6 +482,7 @@ export function ChatClient({
               )}
             </Button>
           </div>
+          {composerError ? <p role="alert" className="mt-2 text-xs text-danger">{composerError}</p> : null}
           <p className="mt-2 hidden text-[10px] text-faint sm:block">
             Enter برای ارسال · Shift + Enter برای خط جدید
           </p>

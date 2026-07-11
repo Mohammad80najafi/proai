@@ -5,13 +5,23 @@ const objectIdSchema = z
   .trim()
   .regex(/^[a-f\d]{24}$/i);
 
+export const chatImageSchema = z
+  .object({
+    url: z.string().regex(/^\/uploads\/messages\/[a-f\d-]+\.(?:png|jpe?g|webp)$/i),
+    width: z.number().int().min(1).max(20_000).nullable().optional(),
+    height: z.number().int().min(1).max(20_000).nullable().optional(),
+  })
+  .strict();
+
 export const sendMessageRequestSchema = z
   .object({
     conversationId: objectIdSchema,
-    content: z.string().trim().min(1).max(12_000),
+    content: z.string().trim().max(12_000).default(""),
+    image: chatImageSchema.nullable().optional(),
     clientNonce: z.string().trim().min(1).max(80).nullable().optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => Boolean(value.content || value.image), { message: "empty message" });
 
 export const markConversationReadRequestSchema = z
   .object({ conversationId: objectIdSchema })

@@ -7,7 +7,7 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { Conversation, ConversationMember, Message } from "@/models/Conversation";
 import { Notification } from "@/models/Notification";
 import { User } from "@/models/User";
-import type { ChatMessage, ChatUser } from "@/features/chat/types";
+import type { ChatImageAttachment, ChatMessage, ChatUser } from "@/features/chat/types";
 
 export type SendMessageResult = {
   message: ChatMessage;
@@ -39,11 +39,13 @@ export async function sendMessage({
   conversationId,
   senderId,
   content,
+  image,
   clientNonce,
 }: {
   conversationId: string;
   senderId: string;
   content: string;
+  image?: ChatImageAttachment | null;
   clientNonce?: string | null;
 }): Promise<SendMessageResult> {
   if (!Types.ObjectId.isValid(conversationId) || !Types.ObjectId.isValid(senderId)) {
@@ -52,7 +54,17 @@ export async function sendMessage({
   if (typeof content !== "string") throw new Error("Invalid message");
 
   const clean = content.trim();
-  if (!clean || clean.length > 12_000) throw new Error("Invalid message");
+  if ((!clean && !image) || clean.length > 12_000) throw new Error("Invalid message");
+  const cleanImage = image
+    ? {
+        url: image.url,
+        width: image.width ?? null,
+        height: image.height ?? null,
+      }
+    : null;
+  if (cleanImage && !/^\/uploads\/messages\/[a-f\d-]+\.(?:png|jpe?g|webp)$/i.test(cleanImage.url)) {
+    throw new Error("Invalid image");
+  }
   if (clientNonce !== undefined && clientNonce !== null && typeof clientNonce !== "string") {
     throw new Error("Invalid nonce");
   }
@@ -131,6 +143,11 @@ export async function sendMessage({
             id: String(existing._id),
             conversationId,
             content: existing.content,
+            image: existing.image?.url ? {
+              url: existing.image.url,
+              width: existing.image.width ?? null,
+              height: existing.image.height ?? null,
+            } : null,
             createdAt: existing.createdAt.toISOString(),
             sender: publicUser(sender),
             own: true,
@@ -150,8 +167,9 @@ export async function sendMessage({
         _id: messageId,
         conversationId,
         senderId,
-        type: "text",
+        type: cleanImage ? "image" : "text",
         content: clean,
+        image: cleanImage ?? undefined,
         clientNonce: cleanNonce,
         readBy: [senderId],
       }],
@@ -191,7 +209,7 @@ export async function sendMessage({
         actorId: senderId,
         type: "message",
         title: `پیام تازه از ${sender.displayName}`,
-        body: clean.slice(0, 300),
+        body: clean.slice(0, 300) || "تصویر",
         entityModel: "Conversation",
         entityId: conversationId,
         href: `/messages?conversation=${conversationId}`,
@@ -205,6 +223,7 @@ export async function sendMessage({
         id: String(messageId),
         conversationId,
         content: clean,
+        image: cleanImage,
         createdAt: now.toISOString(),
         sender: publicUser(sender),
         own: true,

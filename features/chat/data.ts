@@ -21,11 +21,11 @@ export async function getConversationList(userId: string): Promise<ChatConversat
   ]);
   const [users, lastMessages] = await Promise.all([
     User.find({ _id: { $in: otherMembers.map((item) => item.userId) } }).select("username displayName avatar").lean<RawUser[]>(),
-    Message.find({ _id: { $in: conversations.map((item) => item.lastMessageId).filter(Boolean) } }).select("content").lean<Array<{ _id: unknown; content: string }>>(),
+    Message.find({ _id: { $in: conversations.map((item) => item.lastMessageId).filter(Boolean) } }).select("content image").lean<Array<{ _id: unknown; content: string; image?: { url?: string | null } | null }>>(),
   ]);
   const memberMap = new Map(otherMembers.map((item) => [String(item.conversationId), String(item.userId)]));
   const userMap = new Map(users.map((item) => [String(item._id), userDTO(item)]));
-  const messageMap = new Map(lastMessages.map((item) => [String(item._id), item.content]));
+  const messageMap = new Map(lastMessages.map((item) => [String(item._id), item.content || (item.image?.url ? "تصویر" : "گفت‌وگوی تازه")]));
   const unreadMap = new Map(memberships.map((item) => [String(item.conversationId), item.unreadCount]));
   return conversations.flatMap((item) => { const participant = userMap.get(memberMap.get(String(item._id)) ?? ""); return participant ? [{ id: String(item._id), participant, lastMessage: messageMap.get(String(item.lastMessageId)) ?? "گفت‌وگوی تازه", lastMessageAt: (item.lastMessageAt ?? new Date(0)).toISOString(), unreadCount: unreadMap.get(String(item._id)) ?? 0, online: false }] : []; });
 }
@@ -62,11 +62,11 @@ export async function getConversationMessages(conversationId: string, userId: st
   if (!other) return null;
   const [participantRow, rows] = await Promise.all([
     User.findById(other.userId).select("username displayName avatar").lean<RawUser | null>(),
-    Message.find({ conversationId, deletedAt: null }).sort({ createdAt: -1 }).limit(Math.min(limit, 150)).lean<Array<{ _id: unknown; senderId?: unknown | null; content: string; createdAt: Date; clientNonce?: string | null }>>(),
+    Message.find({ conversationId, deletedAt: null }).sort({ createdAt: -1 }).limit(Math.min(limit, 150)).lean<Array<{ _id: unknown; senderId?: unknown | null; content: string; image?: { url?: string | null; width?: number | null; height?: number | null } | null; createdAt: Date; clientNonce?: string | null }>>(),
   ]);
   if (!participantRow) return null;
   const senderIds = [...new Set(rows.map((item) => String(item.senderId ?? "")).filter(Boolean))];
   const senders = await User.find({ _id: { $in: senderIds } }).select("username displayName avatar").lean<RawUser[]>();
   const senderMap = new Map(senders.map((item) => [String(item._id), userDTO(item)]));
-  return { participant: userDTO(participantRow), messages: rows.reverse().map((item) => ({ id: String(item._id), conversationId, content: item.content, createdAt: item.createdAt.toISOString(), sender: item.senderId ? senderMap.get(String(item.senderId)) ?? null : null, own: String(item.senderId) === userId, clientNonce: item.clientNonce ?? null })) };
+  return { participant: userDTO(participantRow), messages: rows.reverse().map((item) => ({ id: String(item._id), conversationId, content: item.content, image: item.image?.url ? { url: item.image.url, width: item.image.width ?? null, height: item.image.height ?? null } : null, createdAt: item.createdAt.toISOString(), sender: item.senderId ? senderMap.get(String(item.senderId)) ?? null : null, own: String(item.senderId) === userId, clientNonce: item.clientNonce ?? null })) };
 }

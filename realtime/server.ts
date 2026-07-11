@@ -4,6 +4,7 @@ import { Server, type Socket } from "socket.io";
 import { z } from "zod";
 
 import { isConversationMember, markConversationRead, sendMessage } from "../features/chat/service";
+import { chatImageSchema } from "../features/chat/validation";
 import type {
   ChatMessageNotification,
   ConversationReadEvent,
@@ -49,10 +50,12 @@ const typingPayloadSchema = z
 const messagePayloadSchema = z
   .object({
     conversationId: objectIdSchema,
-    content: z.string().trim().min(1).max(12_000),
+    content: z.string().trim().max(12_000).default(""),
+    image: chatImageSchema.nullable().optional(),
     clientNonce: z.string().trim().min(1).max(80).optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => Boolean(value.content || value.image), { message: "empty message" });
 
 const httpServer = createServer((request, response) => {
   if (request.url === "/health") {
@@ -328,6 +331,11 @@ io.on("connection", (socket) => {
             conversationId: parsed.data.conversationId,
             senderId: userId,
             content: parsed.data.content,
+            image: parsed.data.image ? {
+              url: parsed.data.image.url,
+              width: parsed.data.image.width ?? null,
+              height: parsed.data.image.height ?? null,
+            } : null,
             clientNonce: parsed.data.clientNonce,
           });
           if (delivery.created) {

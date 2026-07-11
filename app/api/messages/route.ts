@@ -51,6 +51,11 @@ export async function POST(request: Request) {
       conversationId: parsed.data.conversationId,
       senderId: user.id,
       content: parsed.data.content,
+      image: parsed.data.image ? {
+        url: parsed.data.image.url,
+        width: parsed.data.image.width ?? null,
+        height: parsed.data.image.height ?? null,
+      } : null,
       clientNonce: parsed.data.clientNonce,
     });
     return Response.json({ message });

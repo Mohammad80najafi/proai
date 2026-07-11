@@ -135,6 +135,34 @@ describe("sendMessage", () => {
     expect(mocks.notificationInsertMany).toHaveBeenCalledOnce();
   });
 
+  it("creates an image message without requiring a caption", async () => {
+    const result = await sendMessage({
+      conversationId: String(conversationId),
+      senderId: String(senderId),
+      content: "",
+      image: {
+        url: "/uploads/messages/123e4567-e89b-12d3-a456-426614174000.webp",
+        width: 1200,
+        height: 800,
+      },
+      clientNonce: "image-nonce",
+    });
+
+    expect(result.message.image).toEqual({
+      url: "/uploads/messages/123e4567-e89b-12d3-a456-426614174000.webp",
+      width: 1200,
+      height: 800,
+    });
+    expect(mocks.messageCreate).toHaveBeenCalledWith(
+      [expect.objectContaining({ type: "image", content: "" })],
+      { session: mocks.session },
+    );
+    expect(mocks.notificationInsertMany).toHaveBeenCalledWith(
+      [expect.objectContaining({ body: "تصویر" })],
+      { session: mocks.session },
+    );
+  });
+
   it("marks nonce replays as existing so realtime delivery is not duplicated", async () => {
     mocks.messageFindOne.mockReturnValue({
       session: vi.fn().mockResolvedValue({

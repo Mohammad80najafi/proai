@@ -72,8 +72,14 @@ const MessageSchema = new Schema(
   {
     conversationId: objectId("Conversation"),
     senderId: optionalObjectId("User"),
-    type: { type: String, enum: ["text", "system"], default: "text" },
-    content: { type: String, required: true, trim: true, minlength: 1, maxlength: 12_000 },
+    type: { type: String, enum: ["text", "image", "system"], default: "text" },
+    content: { type: String, trim: true, maxlength: 12_000, default: "" },
+    image: {
+      url: { type: String, trim: true, maxlength: 2_048, default: null },
+      width: { type: Number, min: 1, max: 20_000, default: null },
+      height: { type: Number, min: 1, max: 20_000, default: null },
+      _id: false,
+    },
     replyToId: optionalObjectId("Message"),
     readBy: { type: [objectId("User")], default: [] },
     editedAt: { type: Date, default: null },
@@ -106,4 +112,3 @@ export const ConversationMember =
 export const Message =
   (models.Message as Model<MessageDocument> | undefined) ??
   model<MessageDocument>("Message", MessageSchema);
-
