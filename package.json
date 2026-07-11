@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npm run dev:all",
-    "dev:web": "next dev",
+    "dev:web": "next dev --webpack",
     "dev:realtime": "npm run realtime",
     "dev:all": "concurrently -k -n web,realtime -c blue,magenta \"npm:dev:web\" \"npm:dev:realtime\"",
     "build": "next build",

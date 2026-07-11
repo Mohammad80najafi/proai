@@ -33,7 +33,7 @@ export const primaryNavigation: NavigationItem[] = [
 export const mobileNavigation: NavigationItem[] = [
   { label: "خانه", href: "/", icon: Home, exact: true },
   { label: "کاوش", href: "/explore", icon: Compass },
-  { label: "پرامپت‌ها", href: "/prompts", icon: PanelsTopLeft },
+  { label: "بهبودها", href: "/improvements", icon: GitPullRequestArrow },
   { label: "پیام‌ها", href: "/messages", icon: MessageCircle },
   { label: "پروفایل", href: "/profile", icon: UserRound },
 ];
