@@ -9,7 +9,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       {children}
       <Toaster
         dir="rtl"
-        position="bottom-left"
+        position="top-center"
+        offset="72px"
+        mobileOffset="72px"
         richColors
         toastOptions={{
           style: {

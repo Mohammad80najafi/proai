@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   consumeRateLimit: vi.fn(),
   conversationFindOne: vi.fn(),
+  conversationFindById: vi.fn(),
   conversationUpdateOne: vi.fn(),
   memberFind: vi.fn(),
   memberUpdateOne: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   messageFindOne: vi.fn(),
   messageCreate: vi.fn(),
   notificationInsertMany: vi.fn(),
+  notificationUpdateMany: vi.fn(),
   userFind: vi.fn(),
   session: { id: "chat-service-session" },
 }));
@@ -27,6 +29,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/models/Conversation", () => ({
   Conversation: {
     findOne: mocks.conversationFindOne,
+    findById: mocks.conversationFindById,
     updateOne: mocks.conversationUpdateOne,
   },
   ConversationMember: {
@@ -41,11 +44,14 @@ vi.mock("@/models/Conversation", () => ({
   },
 }));
 vi.mock("@/models/Notification", () => ({
-  Notification: { insertMany: mocks.notificationInsertMany },
+  Notification: {
+    insertMany: mocks.notificationInsertMany,
+    updateMany: mocks.notificationUpdateMany,
+  },
 }));
 vi.mock("@/models/User", () => ({ User: { find: mocks.userFind } }));
 
-import { sendMessage } from "@/features/chat/service";
+import { markConversationRead, sendMessage } from "@/features/chat/service";
 
 describe("sendMessage", () => {
   const conversationId = new Types.ObjectId();
@@ -99,6 +105,7 @@ describe("sendMessage", () => {
     mocks.memberUpdateOne.mockResolvedValue({ matchedCount: 1 });
     mocks.memberUpdateMany.mockResolvedValue({ matchedCount: 1 });
     mocks.notificationInsertMany.mockResolvedValue([]);
+    mocks.notificationUpdateMany.mockResolvedValue({ modifiedCount: 0 });
   });
 
   it("returns recipient delivery metadata for a newly created message", async () => {
@@ -150,5 +157,48 @@ describe("sendMessage", () => {
     expect(mocks.messageCreate).not.toHaveBeenCalled();
     expect(mocks.memberUpdateMany).not.toHaveBeenCalled();
     expect(mocks.notificationInsertMany).not.toHaveBeenCalled();
+  });
+
+  it("marks conversation message notifications read and returns the cleared count", async () => {
+    const conversationId = new Types.ObjectId();
+    const userId = new Types.ObjectId();
+    const lastMessageId = new Types.ObjectId();
+    mocks.conversationFindById.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        lean: vi.fn().mockResolvedValue({ lastMessageId }),
+      }),
+    });
+    mocks.memberUpdateOne.mockResolvedValue({ matchedCount: 1 });
+    mocks.notificationUpdateMany.mockResolvedValue({ modifiedCount: 3 });
+
+    const result = await markConversationRead(
+      String(conversationId),
+      String(userId),
+    );
+
+    expect(result).toEqual({ notificationsRead: 3 });
+    expect(mocks.memberUpdateOne).toHaveBeenCalledWith(
+      {
+        conversationId: String(conversationId),
+        userId: String(userId),
+        leftAt: null,
+      },
+      {
+        $set: expect.objectContaining({
+          unreadCount: 0,
+          lastReadMessageId: lastMessageId,
+        }),
+      },
+    );
+    expect(mocks.notificationUpdateMany).toHaveBeenCalledWith(
+      {
+        recipientId: String(userId),
+        type: "message",
+        entityModel: "Conversation",
+        entityId: String(conversationId),
+        readAt: null,
+      },
+      { $set: { readAt: expect.any(Date) } },
+    );
   });
 });

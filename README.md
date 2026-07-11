@@ -35,9 +35,10 @@ This repository contains the working MVP foundation. It runs entirely against a 
 
 - Node.js 20.9 or newer
 - npm
-- Docker Desktop with Docker Compose (recommended), or a local MongoDB Community installation
+- MongoDB Community Server 8 installed locally and running as replica set `rs0`
+- MongoDB Compass (optional, for viewing and managing the local database)
 
-The supplied Docker service runs a single-node replica set and publishes MongoDB only on `127.0.0.1`. Use it for the complete application because publishing, social interactions, forks, and accepted improvements use MongoDB transactions.
+The application connects directly to the native MongoDB Windows service on `127.0.0.1:27017`. MongoDB Compass is a database GUI; the MongoDB Server service must also be installed and running. A replica set is required because publishing, social interactions, forks, and accepted improvements use MongoDB transactions.
 
 ## Quick start
 
@@ -59,11 +60,16 @@ The supplied Docker service runs a single-node replica set and publishes MongoDB
    node -e "console.log(require('node:crypto').randomBytes(48).toString('base64url'))"
    ```
 
-4. Start the local MongoDB replica set and wait until the container is healthy.
+4. Confirm the native MongoDB service is running.
 
    ```powershell
-   npm run db:up
-   docker compose ps
+   Get-Service MongoDB
+   ```
+
+   Its status should be `Running`. In MongoDB Compass, connect with:
+
+   ```text
+   mongodb://127.0.0.1:27017/ai_intelligence_hub?replicaSet=rs0
    ```
 
 5. Seed development data.
@@ -100,7 +106,7 @@ These credentials and privileged demo roles are for local development only. The 
 The committed `.env.example` documents every setting. The defaults are:
 
 ```dotenv
-MONGODB_URI=mongodb://localhost:27017/ai_intelligence_hub?replicaSet=rs0
+MONGODB_URI=mongodb://127.0.0.1:27017/ai_intelligence_hub?replicaSet=rs0
 APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_REALTIME_URL=http://localhost:3001
@@ -119,7 +125,7 @@ The demo seed is intended for local development. Do not enable its non-developme
 
 ### Native MongoDB
 
-For a native local server, set `MONGODB_URI` to its connection string. A standalone instance can serve read-only exploration, but transaction-backed mutations require a replica set. Configure a local replica set or use the included Docker service for the full MVP workflow.
+The default configuration uses the native local MongoDB service and replica set `rs0`. You can inspect the same database in MongoDB Compass using the documented `MONGODB_URI`. A standalone MongoDB process is not sufficient for transaction-backed mutations.
 
 ## AI providers
 
@@ -180,8 +186,6 @@ npm run realtime
 | `npm run dev:realtime` | Start only the realtime gateway |
 | `npm run dev:all` | Explicit alias for the complete development stack |
 | `npm run realtime` | Start the standalone realtime gateway |
-| `npm run db:up` | Start local MongoDB with Docker Compose |
-| `npm run db:down` | Stop the Docker services while preserving the named data volume |
 | `npm run seed` | Upsert Persian demo content, users, and collaboration data |
 | `npm run typecheck` | Run strict TypeScript checks |
 | `npm run lint` | Run ESLint |

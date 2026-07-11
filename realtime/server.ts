@@ -4,7 +4,12 @@ import { Server, type Socket } from "socket.io";
 import { z } from "zod";
 
 import { isConversationMember, markConversationRead, sendMessage } from "../features/chat/service";
-import type { ChatMessageNotification, ConversationReadEvent } from "../features/chat/types";
+import type {
+  ChatMessageNotification,
+  ConversationReadEvent,
+  PresenceEvent,
+  PresenceSnapshot,
+} from "../features/chat/types";
 import { SESSION_COOKIE_NAME } from "../lib/auth/constants";
 import { validateSessionToken } from "../lib/auth/session-validation";
 
@@ -187,7 +192,10 @@ io.on("connection", (socket) => {
 
       presenceRegistered = true;
       socketsByUser.set(userId, (socketsByUser.get(userId) ?? 0) + 1);
-      io.emit("presence", { userId, online: true });
+      io.emit("presence", { userId, online: true } satisfies PresenceEvent);
+      socket.emit("presence:snapshot", {
+        userIds: Array.from(socketsByUser.keys()),
+      } satisfies PresenceSnapshot);
     },
     () => disconnectInvalidSession(socket),
   );
@@ -233,9 +241,10 @@ io.on("connection", (socket) => {
           const allowed = await isConversationMember(conversationId, userId);
           if (allowed) {
             await socket.join(`conversation:${conversationId}`);
-            await markConversationRead(conversationId, userId);
+            const readResult = await markConversationRead(conversationId, userId);
             io.to(`user:${userId}`).emit("conversation:read", {
               conversationId,
+              notificationsRead: readResult.notificationsRead,
             } satisfies ConversationReadEvent);
           }
           acknowledge<JoinAcknowledgement>(acknowledgementCandidate, {
@@ -264,9 +273,10 @@ io.on("connection", (socket) => {
       if (!parsed.success || !(await revalidateSession())) return;
       if (!(await isConversationMember(parsed.data.conversationId, userId))) return;
 
-      await markConversationRead(parsed.data.conversationId, userId);
+      const readResult = await markConversationRead(parsed.data.conversationId, userId);
       io.to(`user:${userId}`).emit("conversation:read", {
         conversationId: parsed.data.conversationId,
+        notificationsRead: readResult.notificationsRead,
       } satisfies ConversationReadEvent);
     });
   });
@@ -354,7 +364,7 @@ io.on("connection", (socket) => {
     const remaining = Math.max(0, (socketsByUser.get(userId) ?? 1) - 1);
     if (remaining === 0) {
       socketsByUser.delete(userId);
-      io.emit("presence", { userId, online: false });
+      io.emit("presence", { userId, online: false } satisfies PresenceEvent);
     } else {
       socketsByUser.set(userId, remaining);
     }

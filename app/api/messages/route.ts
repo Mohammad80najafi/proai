@@ -75,6 +75,6 @@ export async function PATCH(request: Request) {
     return Response.json({ error: "invalid input" }, { status: 400 });
   }
 
-  await markConversationRead(parsed.data.conversationId, user.id);
-  return Response.json({ success: true });
+  const result = await markConversationRead(parsed.data.conversationId, user.id);
+  return Response.json({ success: true, ...result });
 }

@@ -220,21 +220,38 @@ export async function sendMessage({
 }
 
 export async function markConversationRead(conversationId: string, userId: string) {
-  if (!Types.ObjectId.isValid(conversationId) || !Types.ObjectId.isValid(userId)) return;
+  if (!Types.ObjectId.isValid(conversationId) || !Types.ObjectId.isValid(userId)) {
+    return { notificationsRead: 0 };
+  }
   await connectToDatabase();
   const conversation = await Conversation.findById(conversationId)
     .select("lastMessageId")
     .lean<{ lastMessageId?: unknown | null } | null>();
-  if (!conversation) return;
+  if (!conversation) return { notificationsRead: 0 };
 
-  await ConversationMember.updateOne(
-    { conversationId, userId, leftAt: null },
-    {
-      $set: {
-        unreadCount: 0,
-        lastReadAt: new Date(),
-        lastReadMessageId: conversation.lastMessageId ?? null,
+  const now = new Date();
+  const [, notificationUpdate] = await Promise.all([
+    ConversationMember.updateOne(
+      { conversationId, userId, leftAt: null },
+      {
+        $set: {
+          unreadCount: 0,
+          lastReadAt: now,
+          lastReadMessageId: conversation.lastMessageId ?? null,
+        },
       },
-    },
-  );
+    ),
+    Notification.updateMany(
+      {
+        recipientId: userId,
+        type: "message",
+        entityModel: "Conversation",
+        entityId: conversationId,
+        readAt: null,
+      },
+      { $set: { readAt: now } },
+    ),
+  ]);
+
+  return { notificationsRead: notificationUpdate.modifiedCount };
 }

@@ -14,9 +14,7 @@
     "typecheck": "tsc --noEmit --incremental false",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed": "tsx scripts/seed.ts",
-    "db:up": "docker compose up -d mongodb",
-    "db:down": "docker compose down"
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@fontsource-variable/vazirmatn": "^5.2.8",
