@@ -125,6 +125,8 @@ function versionPromptSnapshot(snapshot: PromptSnapshot) {
     description: snapshot.description,
     content: snapshot.content,
     tags: snapshot.tags,
+    category: snapshot.category,
+    license: snapshot.license,
   };
 }
 
@@ -138,6 +140,7 @@ function versionSkillSnapshot(snapshot: SkillSnapshot) {
     tools: snapshot.tools,
     dependencies: snapshot.dependencies,
     tags: snapshot.tags,
+    license: snapshot.license,
   };
 }
 
@@ -808,6 +811,7 @@ export async function forkPromptAction(
   const versionId = new Types.ObjectId();
   let sourceSlug = "";
   let forkSlug = "";
+  let forkCount = 0;
 
   try {
     const database = await connectToDatabase();
@@ -823,6 +827,7 @@ export async function forkPromptAction(
 
       sourceSlug = source.slug;
       forkSlug = makeContentSlug(source.title, "prompt");
+      forkCount = (source.stats?.forks ?? 0) + 1;
       const snapshot: PromptSnapshot = {
         title: source.title,
         description: source.description,
@@ -871,7 +876,7 @@ export async function forkPromptAction(
       );
       await Prompt.updateOne(
         { _id: sourceId },
-        { $set: { "stats.forks": (source.stats?.forks ?? 0) + 1 } },
+        { $set: { "stats.forks": forkCount } },
         { session },
       );
       await User.updateOne({ _id: user.id }, { $inc: { "stats.prompts": 1 } }, { session });
@@ -895,7 +900,11 @@ export async function forkPromptAction(
   revalidateContent("Prompt", sourceSlug);
   revalidateContent("Prompt", forkSlug);
   revalidatePath(`/users/${user.username ?? ""}`);
-  redirect(`/prompts/${forkSlug}`);
+  return {
+    status: "success",
+    message: "فورک ساخته شد. شما همچنان پرامپت اصلی را می‌بینید.",
+    data: { slug: forkSlug, count: forkCount },
+  };
 }
 
 export async function forkSkillAction(
@@ -1018,8 +1027,13 @@ export async function openImprovementRequestAction(
   formData: FormData,
 ): Promise<ContentActionState> {
   const user = authIdentity(await requireUser());
-  const parsed = improvementRequestSchema.safeParse(formDataObject(formData));
+  const values = formDataObject(formData);
+  const parsed = improvementRequestSchema.safeParse(values);
   if (!parsed.success) return validationState(parsed.error);
+  const proposalParsed = parsed.data.targetType === "Prompt"
+    ? createPromptSchema.safeParse(values)
+    : createSkillSchema.safeParse(values);
+  if (!proposalParsed.success) return validationState(proposalParsed.error);
 
   const targetId = toObjectId(parsed.data.targetId, "شناسه محتوای اصلی");
   const forkId = toObjectId(parsed.data.forkId, "شناسه فورک");
@@ -1066,20 +1080,14 @@ export async function openImprovementRequestAction(
         }
         ownerId = target.creatorId;
         targetTitle = target.title;
-        proposedSnapshot = versionPromptSnapshot({
-          title: fork.title,
-          description: fork.description,
-          content: fork.content,
-          category: fork.category,
-          tags: [...fork.tags],
-          visibility: fork.visibility,
-          license: fork.license,
-        });
+        proposedSnapshot = versionPromptSnapshot(promptSnapshot(proposalParsed.data as z.infer<typeof createPromptSchema>));
         baseSnapshot = {
           title: baseVersion.title,
           description: baseVersion.description,
           content: baseVersion.content,
           tags: [...baseVersion.tags],
+          category: baseVersion.category ?? target.category,
+          license: baseVersion.license ?? target.license,
         };
         hasBaseConflict = String(target.currentVersionId ?? "") !== String(baseVersionId);
       } else {
@@ -1103,27 +1111,7 @@ export async function openImprovementRequestAction(
         }
         ownerId = target.creatorId;
         targetTitle = target.name;
-        proposedSnapshot = versionSkillSnapshot({
-          name: fork.name,
-          description: fork.description,
-          instructions: fork.instructions,
-          requiredKnowledge: [...fork.requiredKnowledge],
-          workflow: fork.workflow.map((step) => ({
-            order: step.order,
-            title: step.title,
-            instruction: step.instruction,
-          })),
-          tools: [...fork.tools],
-          dependencies: fork.dependencies.map((dependency) => ({
-            skillId: dependency.skillId ?? null,
-            name: dependency.name,
-            versionRange: dependency.versionRange,
-            optional: dependency.optional,
-          })),
-          tags: [...fork.tags],
-          visibility: fork.visibility,
-          license: fork.license,
-        });
+        proposedSnapshot = versionSkillSnapshot(skillSnapshot(proposalParsed.data as z.infer<typeof createSkillSchema>));
         baseSnapshot = {
           name: baseVersion.name,
           description: baseVersion.description,
@@ -1142,6 +1130,7 @@ export async function openImprovementRequestAction(
             optional: dependency.optional,
           })),
           tags: [...baseVersion.tags],
+          license: baseVersion.license ?? target.license,
         };
         hasBaseConflict = String(target.currentVersionId ?? "") !== String(baseVersionId);
       }
@@ -1166,7 +1155,7 @@ export async function openImprovementRequestAction(
             baseVersionModel:
               parsed.data.targetType === "Prompt" ? "PromptVersion" : "SkillVersion",
             baseVersionId,
-            title: parsed.data.title,
+            title: parsed.data.requestTitle,
             summary: parsed.data.summary,
             proposedSnapshot,
             changedPaths,

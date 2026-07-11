@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Check, LoaderCircle, MessageSquareText, RotateCcw, Send, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/form-controls";
+import { Input, Select, Textarea } from "@/components/ui/form-controls";
 import { addImprovementMessageAction } from "@/features/content/actions";
 import type { ContentActionState } from "@/features/content/mutation-helpers";
 import { decideImprovementAction } from "@/features/improvements/actions";
@@ -17,7 +17,7 @@ export function ImprovementMessageForm({ requestId, disabled = false }: { reques
   return <form action={action} className="space-y-3"><input type="hidden" name="requestId" value={requestId} /><Textarea name="content" label="پیام" placeholder="درباره تغییرات، دلیل تصمیم یا پرسش‌های بررسی بنویسید…" rows={4} required /><div className="flex items-center justify-between gap-3"><p className={`text-xs ${state.status === "error" ? "text-danger" : "text-success"}`}>{state.message}</p><Button type="submit" disabled={pending}>{pending ? <LoaderCircle className="size-4 animate-spin" /> : <Send className="size-4" />}{pending ? "در حال ارسال…" : "ارسال پیام"}</Button></div></form>;
 }
 
-export function ImprovementDecisionPanel({ requestId, status }: { requestId: string; status: string }) {
+export function ImprovementDecisionPanel({ requestId, status, versionBump = "minor", customVersionLabel = "" }: { requestId: string; status: string; versionBump?: string; customVersionLabel?: string }) {
   const [state, action, pending] = useActionState(decideImprovementAction, initialState);
   const active = status === "open" || status === "changes-requested";
   if (!active) return null;
@@ -25,6 +25,15 @@ export function ImprovementDecisionPanel({ requestId, status }: { requestId: str
     <form action={action} className="space-y-4">
       <input type="hidden" name="requestId" value={requestId} />
       <Textarea name="reason" label="یادداشت تصمیم" placeholder="دلیل پذیرش، رد یا تغییرات مورد نیاز را روشن بنویسید…" rows={4} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Select name="versionBump" label="نسخه هنگام پذیرش" defaultValue={versionBump}>
+          <option value="patch">Patch · اصلاح کوچک</option>
+          <option value="minor">Minor · قابلیت تازه</option>
+          <option value="major">Major · تغییر ناسازگار</option>
+          <option value="custom">برچسب سفارشی</option>
+        </Select>
+        <Input name="customVersionLabel" label="برچسب سفارشی" defaultValue={customVersionLabel} placeholder="مثلاً 2.0-beta" dir="ltr" hint="فقط برای حالت سفارشی" />
+      </div>
       {state.message ? <p role={state.status === "error" ? "alert" : undefined} className={`text-xs leading-6 ${state.status === "error" ? "text-danger" : "text-success"}`}>{state.message}</p> : null}
       <div className="grid grid-cols-2 gap-2">
         <Button type="submit" name="decision" value="accept" disabled={pending}><Check className="size-4" />پذیرش</Button>

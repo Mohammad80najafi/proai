@@ -38,7 +38,7 @@ export default async function PromptDetailPage({ params }: Props) {
         eyebrow={<span className="inline-flex items-center gap-2"><Braces className="size-4" />{prompt.category}</span>}
         title={prompt.title}
         description={prompt.description}
-        meta={<><Badge variant="indigo">نسخه {prompt.version.toLocaleString("fa-IR")}</Badge><span className="text-xs text-faint">به‌روزرسانی {formatRelativeDate(prompt.updatedAt)}</span>{prompt.viewer.isOwner ? <Badge variant="green">مالک محتوا</Badge> : null}</>}
+        meta={<><Badge variant="indigo">نسخه {prompt.versions[0]?.versionLabel ?? prompt.version.toLocaleString("fa-IR")}</Badge><span className="text-xs text-faint">به‌روزرسانی {formatRelativeDate(prompt.updatedAt)}</span>{prompt.viewer.isOwner ? <Badge variant="green">مالک محتوا</Badge> : null}</>}
         actions={<CopyButton value={prompt.content} />}
       />
 
@@ -55,7 +55,7 @@ export default async function PromptDetailPage({ params }: Props) {
               {prompt.versions.map((version, index) => (
                 <div key={version.id} className="relative grid grid-cols-[28px_1fr] gap-3 pb-5 last:pb-0">
                   <div className="relative flex justify-center"><span className={`mt-1.5 size-2.5 rounded-full ${index === 0 ? "bg-primary shadow-[0_0_0_5px_rgba(124,134,255,.12)]" : "bg-border-strong"}`} />{index < prompt.versions.length - 1 ? <span className="absolute bottom-0 top-4 w-px bg-border" /> : null}</div>
-                  <div><div className="flex flex-wrap items-center gap-2"><strong className="text-sm">نسخه {version.versionNumber.toLocaleString("fa-IR")}</strong><span className="text-[11px] text-faint">{formatDate(version.createdAt)}</span></div><p className="mt-1 text-xs leading-6 text-muted">{version.changes}</p><p className="mt-1 text-[11px] text-faint">توسط {version.author.displayName}</p></div>
+                  <div><div className="flex flex-wrap items-center gap-2"><strong className="text-sm">نسخه {version.versionLabel}</strong><span className="text-[11px] text-faint">{formatDate(version.createdAt)}</span></div><p className="mt-1 text-xs leading-6 text-muted">{version.changes}</p><p className="mt-1 text-[11px] text-faint">توسط {version.author.displayName}</p></div>
                 </div>
               ))}
             </div>
@@ -73,8 +73,12 @@ export default async function PromptDetailPage({ params }: Props) {
 
         <aside className="space-y-4 xl:sticky xl:top-24">
           {prompt.viewer.isOwner && prompt.forkedFrom ? <Card className="border-primary/20 bg-primary-soft p-5"><p className="text-xs font-semibold text-primary-strong">این پرامپت یک فورک است</p><p className="mt-2 text-xs leading-6 text-muted">تغییرات را برای مالک «{prompt.forkedFrom.title}» بفرستید.</p><ButtonLink href={`/improvements/new?type=Prompt&targetId=${prompt.forkedFrom.targetId}&forkId=${prompt.id}&baseVersionId=${prompt.forkedFrom.baseVersionId}`} size="sm" className="mt-4" fullWidth><GitPullRequestArrow className="size-4" />ارسال پیشنهاد بهبود</ButtonLink></Card> : null}
-          <Card className="p-5"><ContentActions targetType="Prompt" targetId={prompt.id} liked={prompt.viewer.hasLiked} saved={prompt.viewer.hasSaved} rating={prompt.viewer.rating} likes={prompt.stats.likes} saves={prompt.stats.saves} forks={prompt.stats.forks} /></Card>
-          <Card className="p-5"><p className="mb-3 text-xs font-semibold text-faint">سازنده</p><Link href={`/users/${prompt.author.username}`} className="flex items-center gap-3"><Avatar src={prompt.author.avatar} fallback={prompt.author.displayName} alt={prompt.author.displayName} /><div><p className="text-sm font-semibold">{prompt.author.displayName}</p><p className="mt-1 text-[11px] text-faint" dir="ltr">@{prompt.author.username}</p></div></Link></Card>
+          <Card className="p-5"><ContentActions targetType="Prompt" targetId={prompt.id} liked={prompt.viewer.hasLiked} saved={prompt.viewer.hasSaved} rating={prompt.viewer.rating} likes={prompt.stats.likes} saves={prompt.stats.saves} forks={prompt.stats.forks} isOwner={prompt.viewer.isOwner} /></Card>
+          <Card className="p-5">
+            <p className="mb-3 text-xs font-semibold text-faint">سازنده</p>
+            <Link href={`/users/${prompt.author.username}`} className="flex items-center gap-3"><Avatar src={prompt.author.avatar} fallback={prompt.author.displayName} alt={prompt.author.displayName} /><div><p className="text-sm font-semibold">{prompt.author.displayName}</p><p className="mt-1 text-[11px] text-faint" dir="ltr">@{prompt.author.username}</p></div></Link>
+            {prompt.contributors.length ? <div className="mt-4 border-t border-white/[0.07] pt-4"><p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-faint">مشارکت‌کنندگان</p><div className="space-y-2">{prompt.contributors.map((contributor) => <Link key={contributor.id} href={`/users/${contributor.username}`} className="flex items-center gap-2 rounded-lg p-1.5 outline-none transition-colors hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-primary/60"><Avatar src={contributor.avatar} fallback={contributor.displayName} alt="" size="xs" /><span className="text-xs font-medium text-slate-300">{contributor.displayName}</span><Badge variant="green" className="ms-auto">Contributor</Badge></Link>)}</div></div> : null}
+          </Card>
           <Card className="space-y-3 p-5 text-xs text-muted"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><Star className="size-4" />امتیاز جامعه</span><strong className="text-white">{prompt.stats.ratingAverage.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><GitFork className="size-4" />فورک‌ها</span><strong className="text-white">{prompt.stats.forks.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><CalendarDays className="size-4" />انتشار</span><strong className="text-white">{formatDate(prompt.createdAt)}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><ShieldCheck className="size-4" />مجوز</span><strong className="text-white">CC BY 4.0</strong></div></Card>
         </aside>
       </div>

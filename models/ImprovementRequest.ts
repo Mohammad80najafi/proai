@@ -46,6 +46,13 @@ const ImprovementRequestSchema = new Schema(
     summary: { type: String, required: true, trim: true, minlength: 10, maxlength: 4_000 },
     proposedSnapshot: { type: Schema.Types.Mixed, required: true },
     changedPaths: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },
+    versionBump: {
+      type: String,
+      enum: ["patch", "minor", "major", "custom"],
+      default: "minor",
+    },
+    customVersionLabel: { type: String, trim: true, maxlength: 32, default: "" },
+    ownerEditedAt: { type: Date, default: null },
     status: {
       type: String,
       enum: improvementStatuses,
@@ -115,4 +122,3 @@ export const ImprovementDiscussionMessage =
     "ImprovementDiscussionMessage",
     ImprovementDiscussionMessageSchema,
   );
-

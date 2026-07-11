@@ -48,6 +48,7 @@ type RawPrompt = {
   category: string;
   creatorId: unknown;
   currentVersion: number;
+  currentVersionLabel?: string;
   visibility: "draft" | "public" | "unlisted";
   tags?: string[];
   stats?: RawStats;
@@ -69,6 +70,7 @@ type RawSkill = {
   dependencies?: Array<{ name: string; versionRange: string; optional?: boolean }>;
   creatorId: unknown;
   currentVersion: number;
+  currentVersionLabel?: string;
   visibility: "draft" | "public" | "unlisted";
   tags?: string[];
   stats?: RawStats;
@@ -81,10 +83,12 @@ type RawSkill = {
 type RawVersion = {
   _id: unknown;
   versionNumber: number;
+  versionLabel?: string;
   content?: string;
   instructions?: string;
   changeSummary: string;
   authorId: unknown;
+  source?: "initial" | "owner" | "accepted-improvement" | "import";
   createdAt: Date;
 };
 
@@ -258,9 +262,11 @@ async function serializeVersions(rows: RawVersion[]): Promise<VersionDTO[]> {
   return rows.map((row) => ({
     id: id(row._id),
     versionNumber: row.versionNumber,
+    versionLabel: row.versionLabel ?? `${row.versionNumber}.0.0`,
     content: row.content ?? row.instructions ?? "",
     changes: row.changeSummary,
     author: users.get(id(row.authorId)) ?? fallbackUser,
+    source: row.source ?? "owner",
     createdAt: date(row.createdAt),
   }));
 }
@@ -285,12 +291,20 @@ export async function getPromptBySlug(slug: string, viewerId: string | null = nu
       : Promise.resolve(null),
   ]);
   const card = promptCard(prompt, users);
+  const serializedVersions = await serializeVersions(versionRows);
+  const contributors = [...new Map(
+    serializedVersions
+      .filter((version) => version.source === "accepted-improvement" && version.author.id !== card.author.id)
+      .map((version) => [version.author.id, version.author]),
+  ).values()];
   return {
     ...card,
     kind: "prompt",
     content: prompt.content,
     visibility: prompt.visibility,
-    versions: await serializeVersions(versionRows),
+    version: prompt.currentVersion,
+    versions: serializedVersions,
+    contributors,
     forkedFrom: source?.[0] && source[1] ? {
       targetId: id(prompt.forkedFrom?.promptId),
       baseVersionId: id(prompt.forkedFrom?.versionId),
@@ -322,6 +336,12 @@ export async function getSkillBySlug(slug: string, viewerId: string | null = nul
       : Promise.resolve(null),
   ]);
   const card = skillCard(skill, users);
+  const serializedVersions = await serializeVersions(versionRows);
+  const contributors = [...new Map(
+    serializedVersions
+      .filter((version) => version.source === "accepted-improvement" && version.author.id !== card.author.id)
+      .map((version) => [version.author.id, version.author]),
+  ).values()];
   return {
     ...card,
     kind: "skill",
@@ -335,7 +355,8 @@ export async function getSkillBySlug(slug: string, viewerId: string | null = nul
       version: dependency.versionRange,
     })),
     visibility: skill.visibility,
-    versions: await serializeVersions(versionRows),
+    versions: serializedVersions,
+    contributors,
     viewer,
     forkedFrom: source?.[0] && source[1] ? {
       targetId: id(skill.forkedFrom?.skillId),

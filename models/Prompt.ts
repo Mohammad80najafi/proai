@@ -59,6 +59,7 @@ const PromptSchema = new Schema(
     creatorId: objectId("User"),
     currentVersionId: optionalObjectId("PromptVersion"),
     currentVersion: { type: Number, min: 1, default: 1 },
+    currentVersionLabel: { type: String, trim: true, maxlength: 32, default: "1.0.0" },
     visibility: {
       type: String,
       enum: contentVisibilities,

@@ -38,9 +38,11 @@ export type ContentCardDTO = {
 export type VersionDTO = {
   id: string;
   versionNumber: number;
+  versionLabel: string;
   content: string;
   changes: string;
   author: UserSummary;
+  source: "initial" | "owner" | "accepted-improvement" | "import";
   createdAt: string;
 };
 
@@ -49,6 +51,7 @@ export type PromptDetailDTO = ContentCardDTO & {
   content: string;
   visibility: Visibility;
   versions: VersionDTO[];
+  contributors: UserSummary[];
   forkedFrom?: {
     targetId: string;
     baseVersionId: string;
@@ -73,6 +76,7 @@ export type SkillDetailDTO = ContentCardDTO & {
   dependencies: Array<{ name: string; slug: string; version: string }>;
   visibility: Visibility;
   versions: VersionDTO[];
+  contributors: UserSummary[];
   viewer: ViewerState;
   forkedFrom?: {
     targetId: string;

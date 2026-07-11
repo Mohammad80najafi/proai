@@ -70,7 +70,7 @@ export const improvementRequestSchema = z.object({
   targetId: z.string().trim().min(1),
   forkId: z.string().trim().min(1),
   baseVersionId: z.string().trim().min(1),
-  title: z.string().trim().min(3, "عنوان درخواست خیلی کوتاه است.").max(160),
+  requestTitle: z.string().trim().min(3, "عنوان درخواست خیلی کوتاه است.").max(160),
   summary: z.string().trim().min(10, "خلاصهٔ تغییرات باید روشن‌تر باشد.").max(4_000),
 });
 
@@ -83,6 +83,8 @@ export const improvementDecisionSchema = z.object({
   requestId: z.string().trim().min(1),
   decision: z.enum(["accept", "reject", "request-changes", "close"]),
   reason: z.string().trim().max(2_000).default(""),
+  versionBump: z.enum(["patch", "minor", "major", "custom"]).default("minor"),
+  customVersionLabel: z.string().trim().max(32).default(""),
 });
 
 export type CreatePromptInput = z.infer<typeof createPromptSchema>;

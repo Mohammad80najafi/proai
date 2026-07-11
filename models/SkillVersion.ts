@@ -31,6 +31,7 @@ const SkillVersionSchema = new Schema(
   {
     skillId: objectId("Skill"),
     versionNumber: { type: Number, required: true, min: 1, immutable: true },
+    versionLabel: { type: String, trim: true, maxlength: 32, default: "1.0.0" },
     name: { type: String, required: true, trim: true, maxlength: 120 },
     description: { type: String, required: true, trim: true, maxlength: 1_000 },
     instructions: { type: String, required: true, minlength: 20, maxlength: 100_000 },
@@ -42,6 +43,11 @@ const SkillVersionSchema = new Schema(
     tools: { type: [{ type: String, trim: true, maxlength: 120 }], default: [] },
     dependencies: { type: [VersionDependencySchema], default: [] },
     tags: { type: [{ type: String, lowercase: true, trim: true }], default: [] },
+    license: {
+      type: String,
+      enum: ["unspecified", "cc-by-4.0", "cc-by-sa-4.0", "mit", "proprietary"],
+      default: "unspecified",
+    },
     changeSummary: { type: String, required: true, trim: true, maxlength: 2_000 },
     authorId: objectId("User"),
     parentVersionId: optionalObjectId("SkillVersion"),
@@ -69,4 +75,3 @@ export type SkillVersionDocument = InferSchemaType<typeof SkillVersionSchema>;
 export const SkillVersion =
   (models.SkillVersion as Model<SkillVersionDocument> | undefined) ??
   model<SkillVersionDocument>("SkillVersion", SkillVersionSchema);
-

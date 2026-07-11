@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { Bookmark, GitFork, Heart, LoaderCircle, Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export function ContentActions({
   likes,
   saves,
   forks,
+  isOwner = false,
 }: {
   targetType: "Prompt" | "Skill";
   targetId: string;
@@ -27,16 +29,18 @@ export function ContentActions({
   likes: number;
   saves: number;
   forks: number;
+  isOwner?: boolean;
 }) {
   const [likeState, likeAction, likePending] = useActionState(toggleLikeAction, initialState);
   const [saveState, saveAction, savePending] = useActionState(toggleSaveAction, initialState);
   const [ratingState, ratingAction, ratingPending] = useActionState(rateContentAction, initialState);
   const forkAction = targetType === "Prompt" ? forkPromptAction : forkSkillAction;
-  const [, forkFormAction, forkPending] = useActionState(forkAction, initialState);
+  const [forkState, forkFormAction, forkPending] = useActionState(forkAction, initialState);
   const isLiked = likeState.data?.active ?? liked;
   const isSaved = saveState.data?.active ?? saved;
   const likeCount = likeState.data?.count ?? likes;
   const saveCount = saveState.data?.count ?? saves;
+  const forkCount = forkState.data?.count ?? forks;
   const selectedRating = ratingState.data?.rating ?? rating;
 
   return (
@@ -60,12 +64,16 @@ export function ContentActions({
           <input type="hidden" name="targetId" value={targetId} />
           <Button type="submit" variant="outline" fullWidth disabled={forkPending}>
             {forkPending ? <LoaderCircle className="size-4 animate-spin" /> : <GitFork className="size-4" />}
-            {forks.toLocaleString("fa-IR")}
+            {forkCount.toLocaleString("fa-IR")}
           </Button>
         </form>
       </div>
 
-      <form action={ratingAction} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
+      {isOwner ? (
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3 text-xs leading-6 text-muted">
+          مالک محتوا نمی‌تواند به محتوای خودش امتیاز بدهد.
+        </div>
+      ) : <form action={ratingAction} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
         <input type="hidden" name="targetType" value={targetType} /><input type="hidden" name="targetId" value={targetId} />
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs text-muted">امتیاز شما</span>
@@ -77,10 +85,20 @@ export function ContentActions({
             ))}
           </div>
         </div>
-      </form>
+      </form>}
 
-      {[likeState, saveState, ratingState].find((item) => item.status === "error")?.message ? (
-        <p className="text-xs leading-5 text-danger">{[likeState, saveState, ratingState].find((item) => item.status === "error")?.message}</p>
+      {[likeState, saveState, forkState, ratingState].find((item) => item.status === "error")?.message ? (
+        <p className="text-xs leading-5 text-danger">{[likeState, saveState, forkState, ratingState].find((item) => item.status === "error")?.message}</p>
+      ) : null}
+      {forkState.status === "success" && forkState.data?.slug ? (
+        <div className="rounded-xl border border-success/20 bg-success/10 p-3 text-xs leading-6 text-slate-200">
+          <p>{forkState.message}</p>
+          <Link
+            href={`/${targetType === "Prompt" ? "prompts" : "skills"}/${forkState.data.slug}`}
+            className="mt-1 inline-block font-semibold text-success outline-none hover:underline focus-visible:underline">
+            مشاهده فورک شما
+          </Link>
+        </div>
       ) : null}
     </div>
   );

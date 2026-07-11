@@ -12,12 +12,23 @@ const PromptVersionSchema = new Schema(
   {
     promptId: objectId("Prompt"),
     versionNumber: { type: Number, required: true, min: 1, immutable: true },
+    versionLabel: { type: String, trim: true, maxlength: 32, default: "1.0.0" },
     title: { type: String, required: true, trim: true, maxlength: 140 },
     description: { type: String, required: true, trim: true, maxlength: 1_000 },
     content: { type: String, required: true, minlength: 10, maxlength: 100_000 },
     tags: {
       type: [{ type: String, lowercase: true, trim: true, maxlength: 32 }],
       default: [],
+    },
+    category: {
+      type: String,
+      enum: ["development", "writing", "design", "business", "education", "research", "productivity", "other"],
+      default: "other",
+    },
+    license: {
+      type: String,
+      enum: ["unspecified", "cc-by-4.0", "cc-by-sa-4.0", "mit", "proprietary"],
+      default: "unspecified",
     },
     changeSummary: { type: String, required: true, trim: true, maxlength: 2_000 },
     authorId: objectId("User"),
@@ -46,4 +57,3 @@ export type PromptVersionDocument = InferSchemaType<typeof PromptVersionSchema>;
 export const PromptVersion =
   (models.PromptVersion as Model<PromptVersionDocument> | undefined) ??
   model<PromptVersionDocument>("PromptVersion", PromptVersionSchema);
-
