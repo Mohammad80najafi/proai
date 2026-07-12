@@ -1,245 +1,294 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Bookmark,
   Braces,
   Clock3,
-  Cpu,
+  Mail,
   Radio,
   Shapes,
   Sparkles,
+  TrendingUp,
+  WandSparkles,
 } from "lucide-react";
 
-import { NewsCarousel } from "@/components/home/news-carousel";
-import { PromptCard } from "@/components/ui/prompt-card";
-import { SkillCard } from "@/components/ui/skill-card";
-import { getExploreContent } from "@/features/content/data";
-import { homeNewsItems, leadStory } from "@/features/news/data";
+import { homeNewsItems, leadStory, newsStories } from "@/features/news/data";
 
-const briefings = [
-  {
-    label: "برای سازندگان",
-    title: "APIها به سمت انتخاب مدل بر اساس هزینه و عمق کار می‌روند.",
-  },
-  {
-    label: "برای تیم‌ها",
-    title: "ایجنت کدنویسی دیگر فقط کد تولید نمی‌کند؛ پروژه را دنبال می‌کند.",
-  },
-  {
-    label: "برای خلاق‌ها",
-    title: "واترمارک نامرئی به بخشی از تجربه تولید تصویر تبدیل می‌شود.",
-  },
+const topics = [
+  { label: "مدل‌های زبانی", count: "۱۲ مطلب", tone: "bg-[#caffdf]" },
+  { label: "ایجنت‌ها", count: "۹ مطلب", tone: "bg-[#c9dcff]" },
+  { label: "توسعه نرم‌افزار", count: "۱۶ مطلب", tone: "bg-[#ffd6ad]" },
+  { label: "رسانه مولد", count: "۷ مطلب", tone: "bg-[#e8d2ff]" },
 ] as const;
 
-async function getCommunityContent() {
-  try {
-    return await getExploreContent({ sort: "popular", limit: 2 });
-  } catch {
-    return { prompts: [], skills: [] };
-  }
+function ReadingMeta({ date, readTime }: { date: string; readTime: string }) {
+  return (
+    <p className="flex flex-wrap items-center gap-2 text-[10px] text-faint">
+      <span>{date}</span>
+      <span className="size-0.5 rounded-full bg-current" />
+      <span className="inline-flex items-center gap-1">
+        <Clock3 className="size-3" strokeWidth={1.5} aria-hidden="true" />
+        {readTime} مطالعه
+      </span>
+    </p>
+  );
 }
 
-export default async function HomePage() {
-  const content = await getCommunityContent();
+export default function HomePage() {
+  const secondaryStories = homeNewsItems.slice(0, 2);
+  const feedStories = homeNewsItems.slice(2);
 
   return (
-    <div className="space-y-24 overflow-hidden pb-8 sm:space-y-32">
-      <section className="home-reveal relative">
-        <div className="mb-7 flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.07] pb-4">
-          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-slate-300">
+    <div className="space-y-20 overflow-hidden pb-10 sm:space-y-28">
+      <header className="home-reveal border-b border-white/[0.08] pb-6">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.22em] text-primary-strong">PROAI EDITORIAL</p>
+            <h1 className="mt-3 text-4xl font-black tracking-[-0.055em] sm:text-6xl">روزنامه هوش مصنوعی</h1>
+          </div>
+          <div className="text-end text-[11px] leading-6 text-faint">
+            <p>شماره ۱۲۴</p>
+            <p>شنبه، ۲۰ تیر ۱۴۰۵</p>
+          </div>
+        </div>
+
+        <nav className="scrollbar-subtle mt-7 flex gap-2 overflow-x-auto pb-2" aria-label="موضوعات خبر">
+          {["تازه‌ترین", "مدل‌ها", "ایجنت‌ها", "کدنویسی", "پژوهش", "رسانه مولد", "کسب‌وکار"].map((topic, index) => (
+            <a
+              key={topic}
+              href={index === 0 ? "#latest" : "#topics"}
+              className={`shrink-0 rounded-full px-4 py-2 text-xs ring-1 transition-colors duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] ${index === 0 ? "bg-white text-[#090d14] ring-white" : "bg-white/[0.035] text-muted ring-white/[0.07] hover:bg-white/[0.08] hover:text-white"}`}
+            >
+              {topic}
+            </a>
+          ))}
+        </nav>
+      </header>
+
+      <section className="home-reveal home-reveal-delay-1 -mt-14 sm:-mt-20" aria-label="خبر فوری">
+        <div className="flex min-h-12 items-center gap-4 overflow-hidden rounded-2xl bg-white/[0.04] px-4 ring-1 ring-white/[0.06]">
+          <div className="flex shrink-0 items-center gap-2 border-e border-white/[0.08] pe-4 text-[10px] font-semibold text-[#8effc1]">
             <span className="relative flex size-2">
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#8effc1] opacity-50 motion-reduce:animate-none" />
               <span className="relative inline-flex size-2 rounded-full bg-[#8effc1]" />
             </span>
-            رادار هوش مصنوعی
+            روی خط
           </div>
-          <p className="flex items-center gap-2 text-[11px] text-faint">
-            <Clock3 className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-            به‌روزرسانی تحریریه · ۲۰ تیر ۱۴۰۵
-          </p>
+          <div className="scrollbar-subtle flex min-w-0 flex-1 gap-8 overflow-x-auto py-3 text-xs text-slate-300">
+            {homeNewsItems.map((story) => (
+              <Link key={story.slug} href={`/news/${story.slug}`} className="shrink-0 transition-colors duration-500 hover:text-white">
+                {story.source}: {story.title}
+              </Link>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,.65fr)]">
-          <article className="group relative min-h-[560px] overflow-hidden rounded-[2rem] bg-[#d9ffef] p-2 text-[#07110d] sm:min-h-[620px]">
-            <div className="relative flex h-full min-h-[544px] flex-col overflow-hidden rounded-[calc(2rem-0.5rem)] bg-[#caffdf] px-6 py-7 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:min-h-[604px] sm:px-10 sm:py-9 lg:px-14 lg:py-12">
-              <div className="pointer-events-none absolute -left-20 -top-28 size-[420px] rounded-full border-[70px] border-[#0d3728]/[0.06] transition-transform duration-1000 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-110" />
-              <div className="pointer-events-none absolute bottom-16 left-8 font-mono text-[11rem] font-bold leading-none text-[#09281c]/[0.045] sm:text-[16rem]">
-                5.6
+      <section className="home-reveal home-reveal-delay-1 grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,.55fr)]" aria-label="داستان‌های اصلی">
+        <Link
+          href={`/news/${leadStory.slug}`}
+          className="group relative min-h-[570px] overflow-hidden rounded-[2rem] bg-white/[0.045] p-1.5 ring-1 ring-white/[0.06] sm:min-h-[640px]"
+        >
+          <div className="relative h-full min-h-[558px] overflow-hidden rounded-[calc(2rem-0.375rem)] sm:min-h-[628px]">
+            <Image
+              src={leadStory.coverImage}
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 1280px) 100vw, 70vw"
+              className="object-cover transition-transform duration-1000 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.035]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#05080d] via-[#05080d]/40 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10 lg:p-12">
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-3 py-1.5 text-[10px] font-bold text-[#07110d] ${leadStory.accent}`}>داستان جلد</span>
+                <span className="rounded-full bg-black/35 px-3 py-1.5 text-[10px] text-slate-200 ring-1 ring-white/15">{leadStory.category}</span>
               </div>
-
-              <div className="relative flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-                <span className="rounded-full bg-[#082419] px-3 py-1.5 text-[#caffdf]">خبر اول</span>
-                <span className="rounded-full bg-black/[0.055] px-3 py-1.5">{leadStory.category}</span>
-              </div>
-
-              <div className="relative mt-auto max-w-4xl pt-20">
-                <p className="mb-4 text-xs font-semibold text-[#285443]">
-                  {leadStory.source} · {leadStory.date}
-                </p>
-                <h1 className="balanced-text text-[2.6rem] font-black leading-[1.22] tracking-[-0.055em] sm:text-6xl lg:text-[5.3rem]">
-                  {leadStory.title}
-                </h1>
-                <p className="pretty-text mt-6 max-w-2xl text-sm leading-8 text-[#315a4a] sm:text-base sm:leading-9">
-                  {leadStory.summary}
-                </p>
-                <Link
-                  href={`/news/${leadStory.slug}`}
-                  className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#082419] py-2 pe-2 ps-6 text-sm font-semibold text-white transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 active:scale-[0.98]"
-                >
-                  خواندن تحلیل خبر
-                  <span className="grid size-8 place-items-center rounded-full bg-white/10">
-                    <ArrowLeft className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-                  </span>
-                </Link>
+              <h2 className="balanced-text max-w-4xl text-[2.4rem] font-black leading-[1.3] tracking-[-0.05em] sm:text-6xl lg:text-[4.5rem]">
+                {leadStory.title}
+              </h2>
+              <p className="pretty-text mt-5 max-w-2xl text-sm leading-8 text-slate-300 sm:text-base">{leadStory.summary}</p>
+              <div className="mt-6 flex items-center justify-between gap-4">
+                <ReadingMeta date={leadStory.date} readTime={leadStory.readTime} />
+                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-white text-[#08110d] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:-translate-x-1">
+                  <ArrowLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </span>
               </div>
             </div>
-          </article>
+          </div>
+        </Link>
 
-          <aside className="rounded-[2rem] bg-white/[0.055] p-2 ring-1 ring-white/[0.06]">
-            <div className="h-full rounded-[calc(2rem-0.5rem)] bg-[#0b1019] px-5 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:px-7 sm:py-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold tracking-[0.16em] text-primary-strong">AI PULSE</p>
-                  <h2 className="mt-2 text-xl font-bold">روی خط خبر</h2>
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
+          {secondaryStories.map((story) => (
+            <Link key={story.slug} href={`/news/${story.slug}`} className="group flex min-h-[280px] flex-col overflow-hidden rounded-[1.75rem] bg-white/[0.04] p-1.5 ring-1 ring-white/[0.06] xl:min-h-0">
+              <div className="relative min-h-40 flex-1 overflow-hidden rounded-[calc(1.75rem-0.375rem)] bg-[#0a0f17]">
+                <Image src={story.coverImage} alt="" fill sizes="(max-width: 640px) 100vw, 35vw" className="object-cover opacity-80 transition-transform duration-1000 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#090d14] via-transparent to-transparent" />
+                <span className={`absolute end-4 top-4 size-3 rounded-full ${story.accent}`} />
+              </div>
+              <div className="px-3 pb-4 pt-5 sm:px-5">
+                <p className="text-[10px] font-semibold text-primary-strong">{story.category} · {story.source}</p>
+                <h3 className="pretty-text mt-2 text-lg font-bold leading-8">{story.title}</h3>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <ReadingMeta date={story.date} readTime={story.readTime} />
+                  <ArrowLeft className="size-4 text-faint transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:-translate-x-1 group-hover:text-white" strokeWidth={1.4} aria-hidden="true" />
                 </div>
-                <Radio className="size-5 text-[#8effc1]" strokeWidth={1.4} aria-hidden="true" />
               </div>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-              <div className="relative mt-8 space-y-0 before:absolute before:bottom-4 before:right-[5px] before:top-3 before:w-px before:bg-gradient-to-b before:from-[#8effc1] before:via-white/10 before:to-transparent">
-                {homeNewsItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/news/${item.slug}`}
-                    className="group relative block py-5 pe-7 first:pt-1"
-                  >
-                    <span className={`absolute right-0 top-7 size-[11px] rounded-full ring-4 ring-[#0b1019] first:top-2 ${item.accent}`} />
-                    <div className="flex items-center gap-2 text-[10px] text-faint">
-                      <span>{item.date}</span>
-                      <span className="size-0.5 rounded-full bg-faint" />
-                      <span>{item.source}</span>
-                    </div>
-                    <h3 className="pretty-text mt-2 text-sm font-semibold leading-7 text-slate-200 transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:text-white">
-                      {item.title}
-                    </h3>
-                  </Link>
-                ))}
+      <section className="home-reveal home-reveal-delay-2" aria-labelledby="briefing-title">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.17em] text-primary-strong">THE BRIEFING</p>
+            <h2 id="briefing-title" className="mt-2 text-3xl font-black tracking-[-0.04em]">مرور سریع امروز</h2>
+          </div>
+          <p className="flex items-center gap-2 text-[10px] text-faint">
+            <ArrowLeft className="size-3.5" strokeWidth={1.4} aria-hidden="true" />
+            برای مرور، کارت‌ها را بکشید
+          </p>
+        </div>
+        <div className="scrollbar-subtle -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-5 sm:-mx-6 sm:px-6 xl:-mx-8 xl:px-8">
+          {homeNewsItems.map((story) => (
+            <Link key={story.slug} href={`/news/${story.slug}`} className="group w-[82vw] max-w-[390px] shrink-0 snap-start overflow-hidden rounded-[1.5rem] bg-white/[0.04] ring-1 ring-white/[0.06] sm:w-[360px]">
+              <div className="relative aspect-[16/9] overflow-hidden bg-[#0a0f17]">
+                <Image src={story.coverImage} alt="" fill sizes="390px" className="object-cover opacity-75 transition-transform duration-1000 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105" />
+                <div className={`absolute inset-x-0 bottom-0 h-1 ${story.accent}`} />
               </div>
+              <div className="p-5">
+                <p className="text-[10px] font-semibold text-primary-strong">{story.source}</p>
+                <h3 className="pretty-text mt-2 text-base font-bold leading-7">{story.title}</h3>
+                <p className="pretty-text mt-3 text-xs leading-6 text-muted">{story.summary}</p>
+              </div>
+            </Link>
+          ))}
+          <div className="w-8 shrink-0" aria-hidden="true" />
+        </div>
+      </section>
+
+      <section id="latest" className="home-reveal home-reveal-delay-2 scroll-mt-24" aria-labelledby="latest-title">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-16">
+          <div>
+            <div className="mb-7 flex items-center justify-between gap-4 border-b border-white/[0.08] pb-5">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.16em] text-primary-strong">LATEST STORIES</p>
+                <h2 id="latest-title" className="mt-2 text-3xl font-black tracking-[-0.04em]">تازه‌ترین مطالب</h2>
+              </div>
+              <Radio className="size-5 text-[#8effc1]" strokeWidth={1.4} aria-hidden="true" />
+            </div>
+
+            <div className="divide-y divide-white/[0.08]">
+              {[...feedStories, ...secondaryStories].map((story) => (
+                <article key={story.slug} className="py-7 first:pt-0">
+                  <Link href={`/news/${story.slug}`} className="group grid gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
+                    <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-[#0a0f17]">
+                      <Image src={story.coverImage} alt="" fill sizes="(max-width: 640px) 100vw, 220px" className="object-cover opacity-80 transition-transform duration-1000 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-105" />
+                      <span className={`absolute end-3 top-3 size-2.5 rounded-full ${story.accent}`} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold text-primary-strong">{story.category} · {story.source}</p>
+                      <h3 className="pretty-text mt-2 text-xl font-black leading-9 tracking-[-0.025em] transition-colors duration-500 group-hover:text-white sm:text-2xl">{story.title}</h3>
+                      <p className="pretty-text mt-3 text-sm leading-7 text-muted">{story.summary}</p>
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <ReadingMeta date={story.date} readTime={story.readTime} />
+                        <Bookmark className="size-4 text-faint" strokeWidth={1.4} aria-hidden="true" />
+                      </div>
+                    </div>
+                  </Link>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <aside className="space-y-5 lg:sticky lg:top-24">
+            <div className="rounded-[1.5rem] bg-white/[0.04] p-5 ring-1 ring-white/[0.06]">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-4 text-primary-strong" strokeWidth={1.5} aria-hidden="true" />
+                <h2 className="text-sm font-bold">بیشتر خوانده‌شده</h2>
+              </div>
+              <ol className="mt-5 divide-y divide-white/[0.07]">
+                {newsStories.slice(0, 4).map((story, index) => (
+                  <li key={story.slug}>
+                    <Link href={`/news/${story.slug}`} className="group flex gap-4 py-4 first:pt-0 last:pb-0">
+                      <span className="font-mono text-xl font-bold text-white/15">{String(index + 1).padStart(2, "0")}</span>
+                      <div>
+                        <p className="text-[10px] text-primary-strong">{story.source}</p>
+                        <h3 className="pretty-text mt-1 text-xs font-semibold leading-6 text-slate-300 transition-colors duration-500 group-hover:text-white">{story.title}</h3>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="overflow-hidden rounded-[1.5rem] bg-[#caffdf] p-6 text-[#07110d]">
+              <Mail className="size-5" strokeWidth={1.4} aria-hidden="true" />
+              <h2 className="mt-9 text-2xl font-black leading-9">خلاصه مهم‌ها، هفته‌ای یک‌بار.</h2>
+              <p className="mt-3 text-xs leading-6 text-black/60">تحلیل خبرهای هوش مصنوعی برای سازندگان، بدون شلوغی.</p>
+              <Link href="/register" className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#081a12] px-5 py-2.5 text-xs font-semibold text-white">
+                عضویت رایگان
+                <ArrowLeft className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+              </Link>
             </div>
           </aside>
         </div>
       </section>
 
-      <NewsCarousel items={homeNewsItems} />
-
-      <section className="home-reveal home-reveal-delay-2 rounded-[2rem] bg-[#f3f0e8] p-2 text-[#11130f]" aria-labelledby="why-it-matters">
-        <div className="rounded-[calc(2rem-0.5rem)] bg-[#ebe7dc] px-6 py-10 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:px-10 sm:py-14">
-          <div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr]">
-            <div>
-              <p className="text-[10px] font-bold tracking-[0.16em] text-[#5d5d50]">WHY IT MATTERS</p>
-              <h2 id="why-it-matters" className="balanced-text mt-4 text-4xl font-black leading-[1.35] tracking-[-0.045em] sm:text-5xl">
-                معنای خبرها، بدون هیاهو.
-              </h2>
-            </div>
-            <div className="divide-y divide-black/10 border-y border-black/10">
-              {briefings.map((briefing) => (
-                <div key={briefing.label} className="grid gap-2 py-5 sm:grid-cols-[140px_1fr] sm:gap-6">
-                  <p className="text-xs font-bold text-[#647064]">{briefing.label}</p>
-                  <p className="text-base font-semibold leading-8 sm:text-lg">{briefing.title}</p>
+      <section id="topics" className="home-reveal home-reveal-delay-3 scroll-mt-24" aria-labelledby="topics-title">
+        <div className="mb-7">
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-primary-strong">EXPLORE TOPICS</p>
+          <h2 id="topics-title" className="mt-2 text-3xl font-black tracking-[-0.04em]">موضوعات داغ</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {topics.map((topic) => (
+            <a key={topic.label} href="#latest" className="group flex min-h-36 flex-col justify-between rounded-[1.5rem] bg-white/[0.04] p-5 ring-1 ring-white/[0.06] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1">
+              <span className={`size-3 rounded-full ${topic.tone}`} />
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="font-bold">{topic.label}</h3>
+                  <p className="mt-1 text-[10px] text-faint">{topic.count}</p>
                 </div>
-              ))}
-            </div>
-          </div>
+                <ArrowLeft className="size-4 text-faint transition-transform duration-700 group-hover:-translate-x-1 group-hover:text-white" strokeWidth={1.4} aria-hidden="true" />
+              </div>
+            </a>
+          ))}
         </div>
       </section>
 
-      <section className="home-reveal home-reveal-delay-3" aria-labelledby="community-picks">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-primary-strong">
-              <Sparkles className="size-4" strokeWidth={1.5} aria-hidden="true" />
-              <p className="text-[11px] font-semibold">از خبر تا عمل</p>
+      <section className="home-reveal home-reveal-delay-3 rounded-[2rem] bg-[#f1eee5] p-2 text-[#11130f]">
+        <div className="rounded-[calc(2rem-0.5rem)] bg-[#e8e4d8] px-6 py-10 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:px-10 sm:py-12">
+          <div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr] lg:items-center">
+            <div>
+              <div className="flex items-center gap-2 text-[#496154]">
+                <WandSparkles className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                <p className="text-[10px] font-bold tracking-[0.16em]">FROM NEWS TO PRACTICE</p>
+              </div>
+              <h2 className="balanced-text mt-4 text-4xl font-black leading-[1.35] tracking-[-0.045em]">خبر را بخوانید؛ بعد آن را امتحان کنید.</h2>
             </div>
-            <h2 id="community-picks" className="mt-3 text-3xl font-black tracking-[-0.035em]">
-              انتخاب امروز جامعه ProAI
-            </h2>
-          </div>
-          <Link href="/explore" className="group inline-flex w-fit items-center gap-3 rounded-full bg-white/[0.06] py-2 pe-2 ps-5 text-sm text-slate-200 ring-1 ring-white/[0.07] transition-colors duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-white/[0.1] hover:text-white">
-            کاوش همه محتوا
-            <span className="grid size-8 place-items-center rounded-full bg-white/10">
-              <ArrowLeft className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-            </span>
-          </Link>
-        </div>
-
-        {content.prompts.length || content.skills.length ? (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {content.prompts.map((prompt, index) => (
-              <PromptCard
-                key={prompt.id}
-                id={prompt.slug}
-                href={`/prompts/${prompt.slug}`}
-                title={prompt.title}
-                description={prompt.description}
-                author={prompt.author}
-                category={prompt.category}
-                tags={prompt.tags}
-                version={prompt.version}
-                featured={index === 0}
-                stats={{ likes: prompt.stats.likes, saves: prompt.stats.saves, forks: prompt.stats.forks, rating: prompt.stats.ratingAverage }}
-              />
-            ))}
-            {content.skills.map((skill) => (
-              <SkillCard
-                key={skill.id}
-                id={skill.slug}
-                href={`/skills/${skill.slug}`}
-                name={skill.title}
-                description={skill.description}
-                creator={skill.author}
-                modules={skill.tags}
-                forks={skill.stats.forks}
-                rating={skill.stats.ratingAverage}
-                version={skill.version}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Link href="/explore?type=prompts" className="group flex min-h-44 items-end justify-between rounded-[1.75rem] bg-white/[0.04] p-7 ring-1 ring-white/[0.06] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1">
-              <div>
-                <Braces className="mb-6 size-5 text-primary-strong" strokeWidth={1.4} aria-hidden="true" />
-                <h3 className="text-lg font-bold">کاوش پرامپت‌ها</h3>
-                <p className="mt-2 text-sm text-muted">دستورهای آماده برای تجربه مدل‌های تازه</p>
-              </div>
-              <ArrowLeft className="size-4 text-faint" strokeWidth={1.4} aria-hidden="true" />
-            </Link>
-            <Link href="/explore?type=skills" className="group flex min-h-44 items-end justify-between rounded-[1.75rem] bg-white/[0.04] p-7 ring-1 ring-white/[0.06] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1">
-              <div>
-                <Shapes className="mb-6 size-5 text-[#8effc1]" strokeWidth={1.4} aria-hidden="true" />
-                <h3 className="text-lg font-bold">کشف مهارت‌ها</h3>
-                <p className="mt-2 text-sm text-muted">گردش‌کارهای ساخته‌شده برای استفاده واقعی</p>
-              </div>
-              <ArrowLeft className="size-4 text-faint" strokeWidth={1.4} aria-hidden="true" />
-            </Link>
-          </div>
-        )}
-      </section>
-
-      <section className="home-reveal home-reveal-delay-3 flex flex-col items-start justify-between gap-6 border-t border-white/[0.07] pt-10 sm:flex-row sm:items-center">
-        <div className="flex items-start gap-4">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary-soft text-primary-strong">
-            <Cpu className="size-5" strokeWidth={1.4} aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="font-bold">خبر را به یک تجربه واقعی تبدیل کنید.</h2>
-            <p className="mt-1 text-sm leading-7 text-muted">با تحلیل‌گر ProAI یک پرامپت را برای مدل‌های جدید آماده و ارزیابی کنید.</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                { href: "/ai/analyzer", label: "تحلیل پرامپت", helper: "آماده برای مدل‌های تازه", icon: Sparkles },
+                { href: "/explore?type=prompts", label: "پرامپت‌ها", helper: "منتخب جامعه", icon: Braces },
+                { href: "/explore?type=skills", label: "مهارت‌ها", helper: "گردش‌کارهای واقعی", icon: Shapes },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link key={item.href} href={item.href} className="group rounded-[1.25rem] bg-white/45 p-5 ring-1 ring-black/[0.06] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1">
+                    <Icon className="size-5 text-[#496154]" strokeWidth={1.4} aria-hidden="true" />
+                    <h3 className="mt-8 font-bold">{item.label}</h3>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-black/50">
+                      <span>{item.helper}</span>
+                      <ArrowLeft className="size-3.5 transition-transform duration-700 group-hover:-translate-x-1" strokeWidth={1.4} aria-hidden="true" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
-        <Link href="/ai/analyzer" className="group inline-flex shrink-0 items-center gap-3 rounded-full bg-primary py-2 pe-2 ps-5 text-sm font-semibold text-white transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] hover:-translate-y-1 active:scale-[0.98]">
-          شروع تحلیل
-          <span className="grid size-8 place-items-center rounded-full bg-white/15">
-            <ArrowLeft className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-          </span>
-        </Link>
       </section>
     </div>
   );
