@@ -7,6 +7,7 @@ import {
 } from "mongoose";
 
 import {
+  ContentImageSchema,
   objectId,
   optionalObjectId,
   slugPattern,
@@ -50,6 +51,11 @@ const PromptSchema = new Schema(
       maxlength: 1_000,
     },
     content: { type: String, required: true, minlength: 10, maxlength: 100_000 },
+    images: {
+      type: [ContentImageSchema],
+      default: [],
+      validate: { validator: (images: unknown[]) => images.length <= 8, message: "A prompt can have at most 8 images" },
+    },
     category: {
       type: String,
       enum: promptCategories,

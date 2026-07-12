@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, Boxes, CheckCircle2, GitPullRequestArrow, History, MessageSquare, Network, Star, Wrench } from "lucide-react";
+import { ArrowRight, BookOpen, Boxes, CheckCircle2, GitPullRequestArrow, History, MessageSquare, Network, Star, Wrench } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/page-header";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Markdown } from "@/components/ui/markdown";
 import { CommentForm } from "@/features/content/comment-form";
 import { ContentActions } from "@/features/content/content-actions";
+import { ContentImageGallery } from "@/features/content/content-image-gallery";
 import { CopyButton } from "@/features/content/copy-button";
 import { getComments, getSkillBySlug } from "@/features/content/data";
 import { getOptionalUser } from "@/lib/auth/dal";
@@ -32,14 +32,35 @@ export default async function SkillDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-7">
-      <PageHeader
-        breadcrumbs={[{ label: "کاوش مهارت‌ها", href: "/explore?type=skills" }, { label: skill.title }]}
-        eyebrow={<span className="inline-flex items-center gap-2"><Boxes className="size-4" />مهارت تخصصی</span>}
-        title={skill.title}
-        description={skill.description}
-        meta={<><Badge variant="indigo">نسخه {skill.versions[0]?.versionLabel ?? skill.version.toLocaleString("fa-IR")}</Badge><span className="text-xs text-faint">به‌روزرسانی {formatRelativeDate(skill.updatedAt)}</span>{skill.viewer.isOwner ? <Badge variant="green">مالک محتوا</Badge> : null}</>}
-        actions={<CopyButton value={skill.instructions} label="کپی دستورالعمل" />}
-      />
+      <Link href="/explore?type=skills" className="inline-flex items-center gap-2 text-xs text-faint transition-colors hover:text-white">
+        <ArrowRight className="size-4" aria-hidden />
+        بازگشت به کتابخانه مهارت‌ها
+      </Link>
+
+      <section className="relative overflow-hidden rounded-[30px] border border-white/[0.075] bg-[#0d0b15] p-1 shadow-[0_30px_90px_rgba(0,0,0,0.28)]">
+        <div className="relative overflow-hidden rounded-[26px] border border-white/[0.045] bg-[radial-gradient(circle_at_88%_15%,rgba(168,85,247,0.16),transparent_35%),linear-gradient(135deg,#151124,#0a0a12)] px-6 py-8 sm:px-9 sm:py-10">
+          <Boxes className="pointer-events-none absolute -left-5 -top-8 size-40 text-white/[0.022]" aria-hidden />
+          <div className="relative max-w-4xl">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <Badge variant="indigo">مهارت تخصصی</Badge>
+              <Badge>نسخه {skill.versions[0]?.versionLabel ?? skill.version.toLocaleString("fa-IR")}</Badge>
+              {skill.viewer.isOwner ? <Badge variant="green">مالک محتوا</Badge> : null}
+            </div>
+            <h1 className="max-w-3xl text-balance text-3xl font-black leading-[1.45] text-white sm:text-5xl">{skill.title}</h1>
+            <p className="mt-5 max-w-2xl text-sm leading-8 text-slate-400 sm:text-base">{skill.description}</p>
+            <div className="mt-7 flex flex-wrap items-center gap-4 border-t border-white/[0.07] pt-5">
+              <Link href={`/users/${skill.author.username}`} className="flex items-center gap-3">
+                <Avatar src={skill.author.avatar} fallback={skill.author.displayName} alt={skill.author.displayName} size="sm" />
+                <span><span className="block text-xs font-semibold text-slate-200">{skill.author.displayName}</span><span className="mt-0.5 block text-[10px] text-faint" dir="ltr">@{skill.author.username}</span></span>
+              </Link>
+              <span className="text-[11px] text-faint">به‌روزرسانی {formatRelativeDate(skill.updatedAt)}</span>
+              <div className="sm:ms-auto"><CopyButton value={skill.instructions} label="کپی دستورالعمل" /></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ContentImageGallery images={skill.images} title={skill.title} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div className="space-y-6">

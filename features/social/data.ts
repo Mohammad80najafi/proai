@@ -33,8 +33,8 @@ export async function getProfile(username: string, viewerId?: string | null): Pr
   if (!user) return null;
   const profileUserId = String(user._id);
   const [promptRows, skillRows, following, earned, contributionEvents] = await Promise.all([
-    Prompt.find({ creatorId: profileUserId, visibility: "public", moderationStatus: "visible" }).sort({ publishedAt: -1 }).limit(30).lean<Array<{ _id: unknown; title: string; slug: string; description: string; category: string; tags: string[]; currentVersion: number; stats?: Record<string, number>; createdAt: Date; updatedAt: Date }>>(),
-    Skill.find({ creatorId: profileUserId, visibility: "public", moderationStatus: "visible" }).sort({ publishedAt: -1 }).limit(30).lean<Array<{ _id: unknown; name: string; slug: string; description: string; tags: string[]; currentVersion: number; stats?: Record<string, number>; createdAt: Date; updatedAt: Date }>>(),
+    Prompt.find({ creatorId: profileUserId, visibility: "public", moderationStatus: "visible" }).sort({ publishedAt: -1 }).limit(30).lean<Array<{ _id: unknown; title: string; slug: string; description: string; images?: Array<{ url: string; alt: string }>; category: string; tags: string[]; currentVersion: number; stats?: Record<string, number>; createdAt: Date; updatedAt: Date }>>(),
+    Skill.find({ creatorId: profileUserId, visibility: "public", moderationStatus: "visible" }).sort({ publishedAt: -1 }).limit(30).lean<Array<{ _id: unknown; name: string; slug: string; description: string; images?: Array<{ url: string; alt: string }>; tags: string[]; currentVersion: number; stats?: Record<string, number>; createdAt: Date; updatedAt: Date }>>(),
     viewerId ? Follow.exists({ followerId: viewerId, followingId: profileUserId }) : Promise.resolve(null),
     UserAchievement.find({ userId: profileUserId }).sort({ awardedAt: -1 }).lean<Array<{ achievementId: unknown; awardedAt: Date }>>(),
     ReputationEvent.countDocuments({ userId: profileUserId }),
@@ -47,8 +47,8 @@ export async function getProfile(username: string, viewerId?: string | null): Pr
     user: { ...author, bio: user.bio ?? "", createdAt: user.createdAt.toISOString(), stats: stats(user.stats) },
     rankLabel: REPUTATION_RANKS.find((item) => item.key === user.rank)?.label ?? "تازه‌کار",
     isOwnProfile: viewerId === String(user._id), isFollowing: Boolean(following),
-    prompts: promptRows.map((item) => ({ id: String(item._id), kind: "prompt", slug: item.slug, title: item.title, description: item.description, category: categoryLabels[item.category] ?? item.category, tags: item.tags, version: item.currentVersion, author, stats: contentStats(item.stats), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })),
-    skills: skillRows.map((item) => ({ id: String(item._id), kind: "skill", slug: item.slug, title: item.name, description: item.description, category: "مهارت", tags: item.tags, version: item.currentVersion, author, stats: contentStats(item.stats), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })),
+    prompts: promptRows.map((item) => ({ id: String(item._id), kind: "prompt", slug: item.slug, title: item.title, description: item.description, images: item.images ?? [], category: categoryLabels[item.category] ?? item.category, tags: item.tags, version: item.currentVersion, author, stats: contentStats(item.stats), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })),
+    skills: skillRows.map((item) => ({ id: String(item._id), kind: "skill", slug: item.slug, title: item.name, description: item.description, images: item.images ?? [], category: "مهارت", tags: item.tags, version: item.currentVersion, author, stats: contentStats(item.stats), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })),
     achievements: earned.flatMap((item) => { const achievement = achievementMap.get(String(item.achievementId)); return achievement ? [{ id: String(achievement._id), name: achievement.name, description: achievement.description, icon: achievement.icon, tier: achievement.tier, awardedAt: item.awardedAt.toISOString() }] : []; }),
     contributionEvents,
   };

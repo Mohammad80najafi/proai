@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Braces, CalendarDays, GitPullRequestArrow, History, MessageSquare, ShieldCheck, Star } from "lucide-react";
+import { ArrowRight, Braces, CalendarDays, GitPullRequestArrow, History, MessageSquare, ShieldCheck, Star } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/page-header";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Markdown } from "@/components/ui/markdown";
 import { CommentForm } from "@/features/content/comment-form";
 import { ContentActions } from "@/features/content/content-actions";
+import { ContentImageGallery } from "@/features/content/content-image-gallery";
 import { CopyButton } from "@/features/content/copy-button";
 import { getComments, getPromptBySlug } from "@/features/content/data";
 import { getOptionalUser } from "@/lib/auth/dal";
@@ -32,14 +32,35 @@ export default async function PromptDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-7">
-      <PageHeader
-        breadcrumbs={[{ label: "کاوش پرامپت‌ها", href: "/explore?type=prompts" }, { label: prompt.title }]}
-        eyebrow={<span className="inline-flex items-center gap-2"><Braces className="size-4" />{prompt.category}</span>}
-        title={prompt.title}
-        description={prompt.description}
-        meta={<><Badge variant="indigo">نسخه {prompt.versions[0]?.versionLabel ?? prompt.version.toLocaleString("fa-IR")}</Badge><span className="text-xs text-faint">به‌روزرسانی {formatRelativeDate(prompt.updatedAt)}</span>{prompt.viewer.isOwner ? <Badge variant="green">مالک محتوا</Badge> : null}</>}
-        actions={<CopyButton value={prompt.content} />}
-      />
+      <Link href="/explore?type=prompts" className="inline-flex items-center gap-2 text-xs text-faint transition-colors hover:text-white">
+        <ArrowRight className="size-4" aria-hidden />
+        بازگشت به کتابخانه پرامپت‌ها
+      </Link>
+
+      <section className="relative overflow-hidden rounded-[30px] border border-white/[0.075] bg-[#090d17] p-1 shadow-[0_30px_90px_rgba(0,0,0,0.28)]">
+        <div className="relative overflow-hidden rounded-[26px] border border-white/[0.045] bg-[radial-gradient(circle_at_10%_20%,rgba(99,102,241,0.16),transparent_34%),linear-gradient(135deg,#101625,#090c14)] px-6 py-8 sm:px-9 sm:py-10">
+          <Braces className="pointer-events-none absolute -left-5 -top-8 size-40 text-white/[0.022]" aria-hidden />
+          <div className="relative max-w-4xl">
+            <div className="mb-5 flex flex-wrap items-center gap-2">
+              <Badge variant="indigo">پرامپت · {prompt.category}</Badge>
+              <Badge>نسخه {prompt.versions[0]?.versionLabel ?? prompt.version.toLocaleString("fa-IR")}</Badge>
+              {prompt.viewer.isOwner ? <Badge variant="green">مالک محتوا</Badge> : null}
+            </div>
+            <h1 className="max-w-3xl text-balance text-3xl font-black leading-[1.45] text-white sm:text-5xl">{prompt.title}</h1>
+            <p className="mt-5 max-w-2xl text-sm leading-8 text-slate-400 sm:text-base">{prompt.description}</p>
+            <div className="mt-7 flex flex-wrap items-center gap-4 border-t border-white/[0.07] pt-5">
+              <Link href={`/users/${prompt.author.username}`} className="flex items-center gap-3">
+                <Avatar src={prompt.author.avatar} fallback={prompt.author.displayName} alt={prompt.author.displayName} size="sm" />
+                <span><span className="block text-xs font-semibold text-slate-200">{prompt.author.displayName}</span><span className="mt-0.5 block text-[10px] text-faint" dir="ltr">@{prompt.author.username}</span></span>
+              </Link>
+              <span className="text-[11px] text-faint">به‌روزرسانی {formatRelativeDate(prompt.updatedAt)}</span>
+              <div className="sm:ms-auto"><CopyButton value={prompt.content} /></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ContentImageGallery images={prompt.images} title={prompt.title} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div className="space-y-6">

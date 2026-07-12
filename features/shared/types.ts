@@ -19,6 +19,11 @@ export type ContentStats = {
   ratingCount: number;
 };
 
+export type ContentImage = {
+  url: string;
+  alt: string;
+};
+
 export type ContentCardDTO = {
   id: string;
   kind: ContentKind;
@@ -32,6 +37,7 @@ export type ContentCardDTO = {
   stats: ContentStats;
   createdAt: string;
   updatedAt: string;
+  images: ContentImage[];
   isFeatured?: boolean;
 };
 

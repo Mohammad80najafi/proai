@@ -1,5 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Boxes, GitPullRequestArrow, Network, Star, Wrench } from "lucide-react";
+import { Boxes, GitPullRequestArrow, Images, Network, Star, Wrench } from "lucide-react";
+
+import type { ContentImage } from "@/features/shared/types";
 
 import { Avatar } from "./avatar";
 import { Badge } from "./badge";
@@ -10,6 +13,7 @@ export interface SkillCardProps {
   id: string;
   name: string;
   description: string;
+  images?: ContentImage[];
   creator: {
     username: string;
     displayName: string;
@@ -29,6 +33,7 @@ export function SkillCard({
   id,
   name,
   description,
+  images = [],
   creator,
   modules = [],
   toolsCount = 0,
@@ -46,6 +51,35 @@ export function SkillCard({
       interactive
       className={cn("group flex h-full min-w-0 flex-col overflow-hidden", className)}
     >
+      <Link
+        href={skillHref}
+        className="relative block aspect-[16/9] overflow-hidden border-b border-white/[0.055] bg-[#0c0c18] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-400/70"
+        aria-label={name}
+      >
+        {images[0] ? (
+          <Image
+            src={images[0].url}
+            alt={images[0].alt || name}
+            fill
+            sizes="(min-width: 1536px) 30vw, (min-width: 768px) 46vw, 100vw"
+            className="object-cover transition duration-500 group-hover:scale-[1.025] motion-reduce:transition-none"
+          />
+        ) : (
+          <div className="absolute inset-0 grid place-items-center overflow-hidden bg-[radial-gradient(circle_at_80%_20%,rgba(192,132,252,0.16),transparent_38%),linear-gradient(145deg,#111023,#090910)]">
+            <span className="absolute -right-5 top-2 font-mono text-[78px] font-black text-white/[0.025]">01</span>
+            <span className="grid size-14 place-items-center rounded-2xl border border-violet-300/15 bg-violet-300/[0.07] text-violet-200 shadow-[0_16px_45px_rgba(88,28,135,0.2)]">
+              <Boxes className="size-6" aria-hidden />
+            </span>
+          </div>
+        )}
+        {images.length > 1 ? (
+          <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/60 px-2.5 py-1 text-[10px] text-white backdrop-blur-md">
+            <Images className="size-3" aria-hidden />
+            {images.length.toLocaleString("fa-IR")}
+          </span>
+        ) : null}
+      </Link>
+
       <div className="flex items-start justify-between gap-4 px-5 pt-5">
         <div className="grid size-10 shrink-0 place-items-center rounded-[13px] border border-violet-400/15 bg-violet-400/[0.09] text-violet-300">
           <Boxes className="size-[18px]" aria-hidden="true" />

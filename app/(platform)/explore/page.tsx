@@ -93,6 +93,7 @@ export default async function ExplorePage({ searchParams }: { searchParams: Expl
                 description={prompt.description}
                 author={prompt.author}
                 category={prompt.category}
+                images={prompt.images}
                 tags={prompt.tags}
                 version={prompt.version}
                 stats={{ likes: prompt.stats.likes, saves: prompt.stats.saves, forks: prompt.stats.forks, rating: prompt.stats.ratingAverage }}
@@ -113,6 +114,7 @@ export default async function ExplorePage({ searchParams }: { searchParams: Expl
                 href={`/skills/${skill.slug}`}
                 name={skill.title}
                 description={skill.description}
+                images={skill.images}
                 creator={skill.author}
                 modules={skill.tags}
                 forks={skill.stats.forks}

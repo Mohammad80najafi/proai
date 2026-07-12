@@ -18,7 +18,27 @@ function splitList(value: unknown) {
     .filter(Boolean);
 }
 
+function parseImages(value: unknown) {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+const contentImageSchema = z.object({
+  url: z.string().regex(/^\/uploads\/content\/[a-f\d-]+\.(?:png|jpe?g|webp)$/i, "نشانی تصویر معتبر نیست."),
+  alt: z.string().trim().max(200).default(""),
+});
+
+const contentImagesSchema = z
+  .preprocess(parseImages, z.array(contentImageSchema).max(8, "حداکثر ۸ تصویر مجاز است."))
+  .optional();
+
 export const createPromptSchema = z.object({
+  images: contentImagesSchema,
   title: z.string().trim().min(3, "عنوان باید حداقل ۳ نویسه باشد.").max(140),
   description: z.string().trim().min(10, "توضیح کوتاه‌تر از حد مجاز است.").max(1_000),
   content: z.string().trim().min(10, "متن پرامپت باید حداقل ۱۰ نویسه باشد.").max(100_000),
@@ -38,6 +58,7 @@ export const createPromptSchema = z.object({
 });
 
 export const createSkillSchema = z.object({
+  images: contentImagesSchema,
   name: z.string().trim().min(3, "نام مهارت باید حداقل ۳ نویسه باشد.").max(120),
   description: z.string().trim().min(10, "توضیح کوتاه‌تر از حد مجاز است.").max(1_000),
   instructions: z.string().trim().min(20, "دستورالعمل باید حداقل ۲۰ نویسه باشد.").max(100_000),

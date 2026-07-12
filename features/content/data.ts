@@ -13,6 +13,7 @@ import { User } from "@/models/User";
 import type {
   CommentDTO,
   ContentCardDTO,
+  ContentImage,
   ContentStats,
   PromptDetailDTO,
   SkillDetailDTO,
@@ -45,6 +46,7 @@ type RawPrompt = {
   slug: string;
   description: string;
   content: string;
+  images?: ContentImage[];
   category: string;
   creatorId: unknown;
   currentVersion: number;
@@ -64,6 +66,7 @@ type RawSkill = {
   slug: string;
   description: string;
   instructions: string;
+  images?: ContentImage[];
   requiredKnowledge?: string[];
   workflow?: Array<{ order: number; title: string; instruction: string }>;
   tools?: string[];
@@ -165,6 +168,7 @@ function promptCard(prompt: RawPrompt, users: Map<string, UserSummary>): Content
     stats: serializeStats(prompt.stats),
     createdAt: date(prompt.createdAt),
     updatedAt: date(prompt.updatedAt),
+    images: prompt.images ?? [],
   };
 }
 
@@ -182,6 +186,7 @@ function skillCard(skill: RawSkill, users: Map<string, UserSummary>): ContentCar
     stats: serializeStats(skill.stats),
     createdAt: date(skill.createdAt),
     updatedAt: date(skill.updatedAt),
+    images: skill.images ?? [],
   };
 }
 

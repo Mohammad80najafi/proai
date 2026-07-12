@@ -7,6 +7,7 @@ import {
 } from "mongoose";
 
 import {
+  ContentImageSchema,
   objectId,
   optionalObjectId,
   slugPattern,
@@ -52,6 +53,11 @@ const SkillSchema = new Schema(
       maxlength: 1_000,
     },
     instructions: { type: String, required: true, minlength: 20, maxlength: 100_000 },
+    images: {
+      type: [ContentImageSchema],
+      default: [],
+      validate: { validator: (images: unknown[]) => images.length <= 8, message: "A skill can have at most 8 images" },
+    },
     requiredKnowledge: {
       type: [{ type: String, trim: true, maxlength: 120 }],
       default: [],

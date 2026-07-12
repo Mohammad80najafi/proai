@@ -17,6 +17,14 @@ export const timestampOptions = {
   versionKey: false,
 } as const;
 
+export const ContentImageSchema = new Schema(
+  {
+    url: { type: String, required: true, trim: true, maxlength: 2_048 },
+    alt: { type: String, trim: true, maxlength: 200, default: "" },
+  },
+  { _id: false },
+);
+
 export const targetTypes = ["Prompt", "Skill"] as const;
 export const socialTargetTypes = [
   "Prompt",
@@ -32,4 +40,3 @@ export type ObjectId = Types.ObjectId;
 
 export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const usernamePattern = /^[a-z0-9](?:[a-z0-9_-]{1,28}[a-z0-9])?$/;
-

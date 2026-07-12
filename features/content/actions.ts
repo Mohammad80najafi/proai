@@ -68,6 +68,7 @@ type PromptSnapshot = {
   tags: string[];
   visibility: "draft" | "public" | "unlisted";
   license: z.infer<typeof createPromptSchema>["license"];
+  images?: Array<{ url: string; alt: string }>;
 };
 
 type WorkflowStep = { order: number; title: string; instruction: string };
@@ -88,6 +89,7 @@ type SkillSnapshot = {
   tags: string[];
   visibility: "draft" | "public" | "unlisted";
   license: z.infer<typeof createSkillSchema>["license"];
+  images?: Array<{ url: string; alt: string }>;
 };
 
 function promptSnapshot(input: z.infer<typeof createPromptSchema>): PromptSnapshot {
@@ -99,6 +101,7 @@ function promptSnapshot(input: z.infer<typeof createPromptSchema>): PromptSnapsh
     tags: input.tags,
     visibility: input.visibility,
     license: input.license,
+    ...(input.images ? { images: input.images } : {}),
   };
 }
 
@@ -114,6 +117,7 @@ function skillSnapshot(input: z.infer<typeof createSkillSchema>): SkillSnapshot 
     tags: input.tags,
     visibility: input.visibility,
     license: input.license,
+    ...(input.images ? { images: input.images } : {}),
   };
 }
 
@@ -177,6 +181,7 @@ export async function createPromptAction(
           {
             _id: promptId,
             ...snapshot,
+            images: snapshot.images ?? [],
             slug,
             creatorId: user.id,
             currentVersionId: versionId,
@@ -249,6 +254,7 @@ export async function createSkillAction(
           {
             _id: skillId,
             ...snapshot,
+            images: snapshot.images ?? [],
             slug,
             creatorId: user.id,
             currentVersionId: versionId,
