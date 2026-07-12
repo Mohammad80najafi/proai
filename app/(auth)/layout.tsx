@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { GitFork, MessagesSquare, ShieldCheck, Sparkles } from "lucide-react";
+import { GitPullRequestArrow, MessagesSquare, ShieldCheck, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { getOptionalUser } from "@/lib/auth/dal";
 
 const benefits = [
   {
-    icon: GitFork,
+    icon: GitPullRequestArrow,
     title: "بهبود جمعی، نسخه‌های شفاف",
     description: "هر پیشنهاد بهبود با گفت‌وگو، تاریخچه و اعتبار سازنده ثبت می‌شود.",
   },
@@ -93,4 +93,3 @@ export default async function AuthLayout({
     </main>
   );
 }
-

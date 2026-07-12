@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Boxes, GitFork, Network, Star, Wrench } from "lucide-react";
+import { Boxes, GitPullRequestArrow, Network, Star, Wrench } from "lucide-react";
 
 import { Avatar } from "./avatar";
 import { Badge } from "./badge";
@@ -90,9 +90,9 @@ export function SkillCard({
             <Network className="size-3.5 text-slate-600" aria-hidden="true" />
             {dependenciesCount.toLocaleString("fa-IR")} وابستگی
           </span>
-          <span className="flex items-center gap-1.5" title="فورک‌ها">
-            <GitFork className="size-3.5 text-slate-600" aria-hidden="true" />
-            {forks.toLocaleString("fa-IR")} فورک
+          <span className="flex items-center gap-1.5" title="بهبودهای پذیرفته‌شده">
+            <GitPullRequestArrow className="size-3.5 text-slate-600" aria-hidden="true" />
+            {forks.toLocaleString("fa-IR")} بهبود
           </span>
         </div>
       </div>

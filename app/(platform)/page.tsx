@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Bot,
   Braces,
-  GitFork,
   GitPullRequestArrow,
   ScanSearch,
   Shapes,
@@ -51,7 +50,7 @@ export default async function HomePage() {
             هوش مصنوعی با <span className="text-primary-strong">دانش جمعی</span> بهتر می‌شود.
           </h1>
           <p className="pretty-text mt-6 max-w-2xl text-base leading-8 text-muted sm:text-lg sm:leading-9">
-            پرامپت‌ها و مهارت‌های حرفه‌ای را کشف کنید، فورک بزنید، بهترشان کنید و نتیجه را با جامعه به اشتراک بگذارید.
+            پرامپت‌ها و مهارت‌های حرفه‌ای را کشف کنید، برایشان بهبود پیشنهاد دهید و دانش بهتر را با جامعه به اشتراک بگذارید.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="/explore" size="lg">
@@ -113,7 +112,7 @@ export default async function HomePage() {
 
             <div className="flex items-center gap-3 rounded-xl border border-success/15 bg-success/[0.06] p-3 text-xs text-slate-300">
               <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-success/10 text-success">
-                <GitFork className="size-4" aria-hidden="true" />
+                <GitPullRequestArrow className="size-4" aria-hidden="true" />
               </div>
               پذیرش این پیشنهاد، نسخه رسمی بعدی را با نام مشارکت‌کننده می‌سازد.
             </div>
@@ -139,7 +138,7 @@ export default async function HomePage() {
       <section aria-labelledby="platform-stats">
         <h2 id="platform-stats" className="sr-only">آمار جامعه</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Metric label="پرامپت منتشرشده" value={formatNumber(stats.prompts)} icon={<Braces />} helper="نسخه‌پذیر و قابل فورک" />
+          <Metric label="پرامپت منتشرشده" value={formatNumber(stats.prompts)} icon={<Braces />} helper="نسخه‌پذیر و قابل بهبود" />
           <Metric label="مهارت تخصصی" value={formatNumber(stats.skills)} icon={<Shapes />} helper="دانش، ابزار و گردش کار" />
           <Metric label="سازنده فعال" value={formatNumber(stats.users)} icon={<UsersRound />} helper="جامعه‌ای رو به رشد" />
           <Metric label="بهبود پذیرفته‌شده" value={formatNumber(stats.improvements)} icon={<GitPullRequestArrow />} helper="اعتبار کامل برای مشارکت‌کننده" />
@@ -152,7 +151,7 @@ export default async function HomePage() {
             <p className="text-xs font-semibold text-primary">منتخب جامعه</p>
             <h2 id="popular-prompts" className="mt-2 text-2xl font-bold">پرامپت‌های درخشان این هفته</h2>
           </div>
-          <Link href="/prompts" className="inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-white">
+          <Link href="/explore?type=prompts" className="inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-white">
             مشاهده همه
             <ArrowLeft className="size-4" aria-hidden="true" />
           </Link>
@@ -186,7 +185,7 @@ export default async function HomePage() {
             <p className="text-xs font-semibold text-primary">دانش قابل استفاده</p>
             <h2 id="featured-skills" className="mt-2 text-2xl font-bold">مهارت‌های ساخته‌شده برای کار واقعی</h2>
           </div>
-          <Link href="/skills" className="inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-white">
+          <Link href="/explore?type=skills" className="inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-white">
             مشاهده همه
             <ArrowLeft className="size-4" aria-hidden="true" />
           </Link>

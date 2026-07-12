@@ -30,7 +30,6 @@ export type ImprovementListItem = {
 export type ImprovementDetail = ImprovementListItem & {
   targetId: string;
   targetSlug: string;
-  forkId: string;
   baseVersionId: string;
   proposedSnapshot: Record<string, unknown>;
   baseSnapshot: Record<string, unknown>;
@@ -47,6 +46,7 @@ export type ImprovementDraftContext = {
   targetType: "Prompt" | "Skill";
   targetTitle: string;
   ownerName: string;
+  baseVersionId: string;
   initialSnapshot: Record<string, unknown>;
 };
 
@@ -77,7 +77,7 @@ export async function listImprovements(user: AuthenticatedUserDTO): Promise<Impr
 export async function getImprovementDetail(requestId: string, user: AuthenticatedUserDTO): Promise<ImprovementDetail | null> {
   if (!Types.ObjectId.isValid(requestId)) return null;
   await connectToDatabase();
-  const request = await ImprovementRequest.findById(requestId).lean<{ _id: unknown; title: string; summary: string; status: string; targetType: "Prompt" | "Skill"; targetId: unknown; forkId: unknown; baseVersionId: unknown; proposerId: unknown; ownerId: unknown; proposedSnapshot: Record<string, unknown>; versionBump?: "patch" | "minor" | "major" | "custom"; customVersionLabel?: string; ownerEditedAt?: Date | null; decisionReason: string; hasBaseConflict: boolean; changedPaths: string[]; lastActivityAt: Date } | null>();
+  const request = await ImprovementRequest.findById(requestId).lean<{ _id: unknown; title: string; summary: string; status: string; targetType: "Prompt" | "Skill"; targetId: unknown; baseVersionId: unknown; proposerId: unknown; ownerId: unknown; proposedSnapshot: Record<string, unknown>; versionBump?: "patch" | "minor" | "major" | "custom"; customVersionLabel?: string; ownerEditedAt?: Date | null; decisionReason: string; hasBaseConflict: boolean; changedPaths: string[]; lastActivityAt: Date } | null>();
   if (!request) return null;
   const isOwner = String(request.ownerId) === user.id || user.roles.includes("admin");
   const isProposer = String(request.proposerId) === user.id;
@@ -101,7 +101,7 @@ export async function getImprovementDetail(requestId: string, user: Authenticate
   };
   return {
     ...listItem,
-    targetId: String(request.targetId), targetSlug: target?.slug ?? "", forkId: String(request.forkId), baseVersionId: String(request.baseVersionId),
+    targetId: String(request.targetId), targetSlug: target?.slug ?? "", baseVersionId: String(request.baseVersionId),
     proposedSnapshot: request.proposedSnapshot,
     baseSnapshot: request.targetType === "Prompt" ? {
       title: baseVersion?.title ?? "",
@@ -132,46 +132,36 @@ export async function getImprovementDetail(requestId: string, user: Authenticate
 export async function getImprovementDraftContext({
   targetType,
   targetId,
-  forkId,
-  baseVersionId,
   user,
 }: {
   targetType: "Prompt" | "Skill";
   targetId: string;
-  forkId: string;
-  baseVersionId: string;
   user: AuthenticatedUserDTO;
 }): Promise<ImprovementDraftContext | null> {
-  if (![targetId, forkId, baseVersionId, user.id].every(Types.ObjectId.isValid)) return null;
+  if (![targetId, user.id].every(Types.ObjectId.isValid)) return null;
   await connectToDatabase();
 
   if (targetType === "Prompt") {
-    const [target, fork, owner] = await Promise.all([
-      Prompt.findById(targetId).select("title creatorId visibility moderationStatus").lean<{ title: string; creatorId: unknown; visibility: string; moderationStatus: string } | null>(),
-      Prompt.findOne({ _id: forkId, creatorId: user.id }).lean<{ title: string; description: string; content: string; category: string; tags: string[]; license: string; forkedFrom?: { promptId?: unknown; versionId?: unknown } } | null>(),
-      Prompt.findById(targetId).select("creatorId").lean<{ creatorId: unknown } | null>().then(async (row) => row ? User.findById(row.creatorId).select("displayName").lean<{ displayName: string } | null>() : null),
-    ]);
-    if (!target || !fork || target.moderationStatus !== "visible" || !["public", "unlisted"].includes(target.visibility)) return null;
-    if (String(fork.forkedFrom?.promptId ?? "") !== targetId || String(fork.forkedFrom?.versionId ?? "") !== baseVersionId) return null;
+    const target = await Prompt.findById(targetId).lean<{ creatorId: unknown; currentVersionId?: unknown; title: string; description: string; content: string; category: string; tags: string[]; license: string; visibility: string; moderationStatus: string } | null>();
+    if (!target || !target.currentVersionId || String(target.creatorId) === user.id || target.moderationStatus !== "visible" || !["public", "unlisted"].includes(target.visibility)) return null;
+    const owner = await User.findById(target.creatorId).select("displayName").lean<{ displayName: string } | null>();
     return {
       targetType,
       targetTitle: target.title,
       ownerName: owner?.displayName ?? "مالک محتوا",
-      initialSnapshot: { title: fork.title, description: fork.description, content: fork.content, category: fork.category, tags: fork.tags, license: fork.license },
+      baseVersionId: String(target.currentVersionId),
+      initialSnapshot: { title: target.title, description: target.description, content: target.content, category: target.category, tags: target.tags, license: target.license },
     };
   }
 
-  const [target, fork, owner] = await Promise.all([
-    Skill.findById(targetId).select("name creatorId visibility moderationStatus").lean<{ name: string; creatorId: unknown; visibility: string; moderationStatus: string } | null>(),
-    Skill.findOne({ _id: forkId, creatorId: user.id }).lean<{ name: string; description: string; instructions: string; requiredKnowledge: string[]; workflow: unknown[]; tools: string[]; dependencies: unknown[]; tags: string[]; license: string; forkedFrom?: { skillId?: unknown; versionId?: unknown } } | null>(),
-    Skill.findById(targetId).select("creatorId").lean<{ creatorId: unknown } | null>().then(async (row) => row ? User.findById(row.creatorId).select("displayName").lean<{ displayName: string } | null>() : null),
-  ]);
-  if (!target || !fork || target.moderationStatus !== "visible" || !["public", "unlisted"].includes(target.visibility)) return null;
-  if (String(fork.forkedFrom?.skillId ?? "") !== targetId || String(fork.forkedFrom?.versionId ?? "") !== baseVersionId) return null;
+  const target = await Skill.findById(targetId).lean<{ creatorId: unknown; currentVersionId?: unknown; name: string; description: string; instructions: string; requiredKnowledge: string[]; workflow: unknown[]; tools: string[]; dependencies: unknown[]; tags: string[]; license: string; visibility: string; moderationStatus: string } | null>();
+  if (!target || !target.currentVersionId || String(target.creatorId) === user.id || target.moderationStatus !== "visible" || !["public", "unlisted"].includes(target.visibility)) return null;
+  const owner = await User.findById(target.creatorId).select("displayName").lean<{ displayName: string } | null>();
   return {
     targetType,
     targetTitle: target.name,
     ownerName: owner?.displayName ?? "مالک محتوا",
-    initialSnapshot: { name: fork.name, description: fork.description, instructions: fork.instructions, requiredKnowledge: fork.requiredKnowledge, workflow: fork.workflow, tools: fork.tools, dependencies: fork.dependencies, tags: fork.tags, license: fork.license },
+    baseVersionId: String(target.currentVersionId),
+    initialSnapshot: { name: target.name, description: target.description, instructions: target.instructions, requiredKnowledge: target.requiredKnowledge, workflow: target.workflow, tools: target.tools, dependencies: target.dependencies, tags: target.tags, license: target.license },
   };
 }

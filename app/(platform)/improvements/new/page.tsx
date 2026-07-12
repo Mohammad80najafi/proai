@@ -5,20 +5,18 @@ import { getImprovementDraftContext } from "@/features/improvements/data";
 import { OpenImprovementForm } from "@/features/improvements/open-improvement-form";
 import { requireUser } from "@/lib/auth/dal";
 
-type Search = Promise<{ type?: string; targetId?: string; forkId?: string; baseVersionId?: string }>;
+type Search = Promise<{ type?: string; targetId?: string }>;
 
 export const metadata = { title: "ارسال پیشنهاد بهبود" };
 
 export default async function NewImprovementPage({ searchParams }: { searchParams: Search }) {
   const user = await requireUser();
   const query = await searchParams;
-  if ((query.type !== "Prompt" && query.type !== "Skill") || !query.targetId || !query.forkId || !query.baseVersionId) notFound();
+  if ((query.type !== "Prompt" && query.type !== "Skill") || !query.targetId) notFound();
 
   const context = await getImprovementDraftContext({
     targetType: query.type,
     targetId: query.targetId,
-    forkId: query.forkId,
-    baseVersionId: query.baseVersionId,
     user,
   });
   if (!context) notFound();
@@ -34,8 +32,7 @@ export default async function NewImprovementPage({ searchParams }: { searchParam
       <OpenImprovementForm
         targetType={query.type}
         targetId={query.targetId}
-        forkId={query.forkId}
-        baseVersionId={query.baseVersionId}
+        baseVersionId={context.baseVersionId}
         initialSnapshot={context.initialSnapshot}
       />
     </div>

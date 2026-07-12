@@ -60,8 +60,6 @@ const skillVersionSchema = createSkillSchema.extend({
   skillId: objectIdSchema,
   changeSummary: changeSummarySchema,
 });
-const forkSchema = z.object({ targetId: objectIdSchema });
-
 type PromptSnapshot = {
   title: string;
   description: string;
@@ -798,230 +796,6 @@ export async function addCommentAction(
   };
 }
 
-export async function forkPromptAction(
-  _previousState: ContentActionState,
-  formData: FormData,
-): Promise<ContentActionState> {
-  const user = authIdentity(await requireUser());
-  const values = formDataObject(formData);
-  const parsed = forkSchema.safeParse({ targetId: values.targetId ?? values.promptId });
-  if (!parsed.success) return validationState(parsed.error);
-  const sourceId = toObjectId(parsed.data.targetId, "شناسه پرامپت");
-  const forkId = new Types.ObjectId();
-  const versionId = new Types.ObjectId();
-  let sourceSlug = "";
-  let forkSlug = "";
-  let forkCount = 0;
-
-  try {
-    const database = await connectToDatabase();
-    await database.connection.transaction(async (session) => {
-      const source = await Prompt.findOne({
-        _id: sourceId,
-        visibility: "public",
-        moderationStatus: "visible",
-      }).session(session);
-      if (!source || !source.currentVersionId) {
-        throw new PublicActionError("این پرامپت عمومی نیست یا نسخه رسمی ندارد.");
-      }
-
-      sourceSlug = source.slug;
-      forkSlug = makeContentSlug(source.title, "prompt");
-      forkCount = (source.stats?.forks ?? 0) + 1;
-      const snapshot: PromptSnapshot = {
-        title: source.title,
-        description: source.description,
-        content: source.content,
-        category: source.category,
-        tags: [...source.tags],
-        visibility: "public",
-        license: source.license,
-      };
-
-      await Prompt.create(
-        [
-          {
-            _id: forkId,
-            ...snapshot,
-            slug: forkSlug,
-            creatorId: user.id,
-            currentVersionId: versionId,
-            currentVersion: 1,
-            publishedAt: new Date(),
-            forkedFrom: {
-              promptId: source._id,
-              versionId: source.currentVersionId,
-              creatorId: source.creatorId,
-            },
-          },
-        ],
-        { session },
-      );
-      await PromptVersion.create(
-        [
-          {
-            _id: versionId,
-            promptId: forkId,
-            versionNumber: 1,
-            ...versionPromptSnapshot(snapshot),
-            changeSummary: `فورک از نسخه ${source.currentVersion.toLocaleString("fa-IR")}`,
-            authorId: user.id,
-            parentVersionId: null,
-            source: "import",
-            contentHash: contentHash(versionPromptSnapshot(snapshot)),
-            isOfficial: true,
-          },
-        ],
-        { session },
-      );
-      await Prompt.updateOne(
-        { _id: sourceId },
-        { $set: { "stats.forks": forkCount } },
-        { session },
-      );
-      await User.updateOne({ _id: user.id }, { $inc: { "stats.prompts": 1 } }, { session });
-      await createNotification({
-        recipientId: source.creatorId,
-        actorId: user.id,
-        type: "system",
-        title: "پرامپت شما فورک شد",
-        body: `یک فورک مستقل از «${source.title}» ساخته شد.`,
-        entityModel: "Prompt",
-        entityId: forkId,
-        href: `/prompts/${forkSlug}`,
-        dedupeKey: `prompt-fork:${forkId}`,
-        session,
-      });
-    });
-  } catch (error) {
-    return actionFailure(error);
-  }
-
-  revalidateContent("Prompt", sourceSlug);
-  revalidateContent("Prompt", forkSlug);
-  revalidatePath(`/users/${user.username ?? ""}`);
-  return {
-    status: "success",
-    message: "فورک ساخته شد. شما همچنان پرامپت اصلی را می‌بینید.",
-    data: { slug: forkSlug, count: forkCount },
-  };
-}
-
-export async function forkSkillAction(
-  _previousState: ContentActionState,
-  formData: FormData,
-): Promise<ContentActionState> {
-  const user = authIdentity(await requireUser());
-  const values = formDataObject(formData);
-  const parsed = forkSchema.safeParse({ targetId: values.targetId ?? values.skillId });
-  if (!parsed.success) return validationState(parsed.error);
-  const sourceId = toObjectId(parsed.data.targetId, "شناسه مهارت");
-  const forkId = new Types.ObjectId();
-  const versionId = new Types.ObjectId();
-  let sourceSlug = "";
-  let forkSlug = "";
-
-  try {
-    const database = await connectToDatabase();
-    await database.connection.transaction(async (session) => {
-      const source = await Skill.findOne({
-        _id: sourceId,
-        visibility: "public",
-        moderationStatus: "visible",
-      }).session(session);
-      if (!source || !source.currentVersionId) {
-        throw new PublicActionError("این مهارت عمومی نیست یا نسخه رسمی ندارد.");
-      }
-
-      sourceSlug = source.slug;
-      forkSlug = makeContentSlug(source.name, "skill");
-      const snapshot: SkillSnapshot = {
-        name: source.name,
-        description: source.description,
-        instructions: source.instructions,
-        requiredKnowledge: [...source.requiredKnowledge],
-        workflow: source.workflow.map((step) => ({
-          order: step.order,
-          title: step.title,
-          instruction: step.instruction,
-        })),
-        tools: [...source.tools],
-        dependencies: source.dependencies.map((dependency) => ({
-          skillId: dependency.skillId ?? null,
-          name: dependency.name,
-          versionRange: dependency.versionRange,
-          optional: dependency.optional,
-        })),
-        tags: [...source.tags],
-        visibility: "public",
-        license: source.license,
-      };
-
-      await Skill.create(
-        [
-          {
-            _id: forkId,
-            ...snapshot,
-            slug: forkSlug,
-            creatorId: user.id,
-            currentVersionId: versionId,
-            currentVersion: 1,
-            publishedAt: new Date(),
-            forkedFrom: {
-              skillId: source._id,
-              versionId: source.currentVersionId,
-              creatorId: source.creatorId,
-            },
-          },
-        ],
-        { session },
-      );
-      await SkillVersion.create(
-        [
-          {
-            _id: versionId,
-            skillId: forkId,
-            versionNumber: 1,
-            ...versionSkillSnapshot(snapshot),
-            changeSummary: `فورک از نسخه ${source.currentVersion.toLocaleString("fa-IR")}`,
-            authorId: user.id,
-            parentVersionId: null,
-            source: "import",
-            contentHash: contentHash(versionSkillSnapshot(snapshot)),
-            isOfficial: true,
-          },
-        ],
-        { session },
-      );
-      await Skill.updateOne(
-        { _id: sourceId },
-        { $set: { "stats.forks": (source.stats?.forks ?? 0) + 1 } },
-        { session },
-      );
-      await User.updateOne({ _id: user.id }, { $inc: { "stats.skills": 1 } }, { session });
-      await createNotification({
-        recipientId: source.creatorId,
-        actorId: user.id,
-        type: "system",
-        title: "مهارت شما فورک شد",
-        body: `یک فورک مستقل از «${source.name}» ساخته شد.`,
-        entityModel: "Skill",
-        entityId: forkId,
-        href: `/skills/${forkSlug}`,
-        dedupeKey: `skill-fork:${forkId}`,
-        session,
-      });
-    });
-  } catch (error) {
-    return actionFailure(error);
-  }
-
-  revalidateContent("Skill", sourceSlug);
-  revalidateContent("Skill", forkSlug);
-  revalidatePath(`/users/${user.username ?? ""}`);
-  redirect(`/skills/${forkSlug}`);
-}
-
 export async function openImprovementRequestAction(
   _previousState: ContentActionState,
   formData: FormData,
@@ -1036,7 +810,6 @@ export async function openImprovementRequestAction(
   if (!proposalParsed.success) return validationState(proposalParsed.error);
 
   const targetId = toObjectId(parsed.data.targetId, "شناسه محتوای اصلی");
-  const forkId = toObjectId(parsed.data.forkId, "شناسه فورک");
   const baseVersionId = toObjectId(parsed.data.baseVersionId, "شناسه نسخه پایه");
   const requestId = new Types.ObjectId();
 
@@ -1046,11 +819,12 @@ export async function openImprovementRequestAction(
       const duplicate = await ImprovementRequest.exists({
         targetType: parsed.data.targetType,
         targetId,
-        forkId,
+        proposerId: user.id,
+        baseVersionId,
         status: { $in: ["open", "changes-requested"] },
       }).session(session);
       if (duplicate) {
-        throw new PublicActionError("برای این فورک یک پیشنهاد فعال وجود دارد.");
+        throw new PublicActionError("برای این نسخه یک پیشنهاد بهبود فعال دارید.");
       }
 
       let ownerId: Types.ObjectId;
@@ -1060,23 +834,16 @@ export async function openImprovementRequestAction(
       let hasBaseConflict = false;
 
       if (parsed.data.targetType === "Prompt") {
-        const [target, fork, baseVersion] = await Promise.all([
+        const [target, baseVersion] = await Promise.all([
           Prompt.findOne({
             _id: targetId,
             visibility: { $in: ["public", "unlisted"] as const },
             moderationStatus: "visible" as const,
           }).session(session),
-          Prompt.findOne({ _id: forkId, creatorId: user.id }).session(session),
           PromptVersion.findOne({ _id: baseVersionId, promptId: targetId }).session(session),
         ]);
-        if (!target || !fork || !baseVersion) {
-          throw new PublicActionError("محتوای اصلی، فورک یا نسخه پایه پیدا نشد.");
-        }
-        if (
-          String(fork.forkedFrom?.promptId ?? "") !== String(targetId) ||
-          String(fork.forkedFrom?.versionId ?? "") !== String(baseVersionId)
-        ) {
-          throw new PublicActionError("این فورک از نسخه پایه انتخاب‌شده ساخته نشده است.");
+        if (!target || !baseVersion) {
+          throw new PublicActionError("پرامپت اصلی یا نسخه پایه پیدا نشد.");
         }
         ownerId = target.creatorId;
         targetTitle = target.title;
@@ -1091,23 +858,16 @@ export async function openImprovementRequestAction(
         };
         hasBaseConflict = String(target.currentVersionId ?? "") !== String(baseVersionId);
       } else {
-        const [target, fork, baseVersion] = await Promise.all([
+        const [target, baseVersion] = await Promise.all([
           Skill.findOne({
             _id: targetId,
             visibility: { $in: ["public", "unlisted"] as const },
             moderationStatus: "visible" as const,
           }).session(session),
-          Skill.findOne({ _id: forkId, creatorId: user.id }).session(session),
           SkillVersion.findOne({ _id: baseVersionId, skillId: targetId }).session(session),
         ]);
-        if (!target || !fork || !baseVersion) {
-          throw new PublicActionError("محتوای اصلی، فورک یا نسخه پایه پیدا نشد.");
-        }
-        if (
-          String(fork.forkedFrom?.skillId ?? "") !== String(targetId) ||
-          String(fork.forkedFrom?.versionId ?? "") !== String(baseVersionId)
-        ) {
-          throw new PublicActionError("این فورک از نسخه پایه انتخاب‌شده ساخته نشده است.");
+        if (!target || !baseVersion) {
+          throw new PublicActionError("مهارت اصلی یا نسخه پایه پیدا نشد.");
         }
         ownerId = target.creatorId;
         targetTitle = target.name;
@@ -1140,7 +900,7 @@ export async function openImprovementRequestAction(
       }
       const changedPaths = changedSnapshotPaths(baseSnapshot, proposedSnapshot);
       if (changedPaths.length === 0) {
-        throw new PublicActionError("فورک تغییری نسبت به نسخه پایه ندارد.");
+        throw new PublicActionError("پیشنهاد شما تغییری نسبت به نسخه پایه ندارد.");
       }
 
       await ImprovementRequest.create(
@@ -1151,7 +911,6 @@ export async function openImprovementRequestAction(
             targetId,
             ownerId,
             proposerId: user.id,
-            forkId,
             baseVersionModel:
               parsed.data.targetType === "Prompt" ? "PromptVersion" : "SkillVersion",
             baseVersionId,

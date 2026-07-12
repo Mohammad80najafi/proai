@@ -153,7 +153,10 @@ export async function decideImprovementAction(
         if (!versionLabel) throw new PublicActionError("برچسب نسخه سفارشی معتبر نیست.");
         const updated = await Prompt.updateOne(
           { _id: target._id, currentVersionId: request.baseVersionId },
-          { $set: { ...snapshot, currentVersion: nextVersion, currentVersionLabel: versionLabel, currentVersionId: nextVersionId, updatedAt: new Date() } },
+          {
+            $set: { ...snapshot, currentVersion: nextVersion, currentVersionLabel: versionLabel, currentVersionId: nextVersionId, updatedAt: new Date() },
+            $inc: { "stats.forks": 1 },
+          },
           { session },
         );
         if (updated.modifiedCount !== 1) {
@@ -197,7 +200,10 @@ export async function decideImprovementAction(
         if (!versionLabel) throw new PublicActionError("برچسب نسخه سفارشی معتبر نیست.");
         const updated = await Skill.updateOne(
           { _id: target._id, currentVersionId: request.baseVersionId },
-          { $set: { ...snapshot, currentVersion: nextVersion, currentVersionLabel: versionLabel, currentVersionId: nextVersionId, updatedAt: new Date() } },
+          {
+            $set: { ...snapshot, currentVersion: nextVersion, currentVersionLabel: versionLabel, currentVersionId: nextVersionId, updatedAt: new Date() },
+            $inc: { "stats.forks": 1 },
+          },
           { session },
         );
         if (updated.modifiedCount !== 1) {

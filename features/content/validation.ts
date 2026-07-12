@@ -68,7 +68,6 @@ export const ratingSchema = interactionSchema.extend({
 export const improvementRequestSchema = z.object({
   targetType: z.enum(["Prompt", "Skill"]),
   targetId: z.string().trim().min(1),
-  forkId: z.string().trim().min(1),
   baseVersionId: z.string().trim().min(1),
   requestTitle: z.string().trim().min(3, "عنوان درخواست خیلی کوتاه است.").max(160),
   summary: z.string().trim().min(10, "خلاصهٔ تغییرات باید روشن‌تر باشد.").max(4_000),

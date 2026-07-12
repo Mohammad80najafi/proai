@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, Boxes, CheckCircle2, GitFork, GitPullRequestArrow, History, MessageSquare, Network, Star, Wrench } from "lucide-react";
+import { BookOpen, Boxes, CheckCircle2, GitPullRequestArrow, History, MessageSquare, Network, Star, Wrench } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Markdown } from "@/components/ui/markdown";
 import { CommentForm } from "@/features/content/comment-form";
@@ -34,7 +33,7 @@ export default async function SkillDetailPage({ params }: Props) {
   return (
     <div className="space-y-7">
       <PageHeader
-        breadcrumbs={[{ label: "مهارت‌ها", href: "/skills" }, { label: skill.title }]}
+        breadcrumbs={[{ label: "کاوش مهارت‌ها", href: "/explore?type=skills" }, { label: skill.title }]}
         eyebrow={<span className="inline-flex items-center gap-2"><Boxes className="size-4" />مهارت تخصصی</span>}
         title={skill.title}
         description={skill.description}
@@ -61,14 +60,13 @@ export default async function SkillDetailPage({ params }: Props) {
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-24">
-          {skill.viewer.isOwner && skill.forkedFrom ? <Card className="border-primary/20 bg-primary-soft p-5"><p className="text-xs font-semibold text-primary-strong">این مهارت یک فورک است</p><p className="mt-2 text-xs leading-6 text-muted">تغییرات را برای مالک «{skill.forkedFrom.title}» بفرستید.</p><ButtonLink href={`/improvements/new?type=Skill&targetId=${skill.forkedFrom.targetId}&forkId=${skill.id}&baseVersionId=${skill.forkedFrom.baseVersionId}`} size="sm" className="mt-4" fullWidth><GitPullRequestArrow className="size-4" />ارسال پیشنهاد بهبود</ButtonLink></Card> : null}
-          <Card className="p-5"><ContentActions targetType="Skill" targetId={skill.id} liked={skill.viewer.hasLiked} saved={skill.viewer.hasSaved} rating={skill.viewer.rating} likes={skill.stats.likes} saves={skill.stats.saves} forks={skill.stats.forks} isOwner={skill.viewer.isOwner} /></Card>
+          <Card className="p-5"><ContentActions targetType="Skill" targetId={skill.id} liked={skill.viewer.hasLiked} saved={skill.viewer.hasSaved} rating={skill.viewer.rating} likes={skill.stats.likes} saves={skill.stats.saves} improvements={skill.stats.forks} isOwner={skill.viewer.isOwner} /></Card>
           <Card className="p-5">
             <p className="mb-3 text-xs font-semibold text-faint">سازنده</p>
             <Link href={`/users/${skill.author.username}`} className="flex items-center gap-3"><Avatar src={skill.author.avatar} fallback={skill.author.displayName} alt={skill.author.displayName} /><div><p className="text-sm font-semibold">{skill.author.displayName}</p><p className="mt-1 text-[11px] text-faint" dir="ltr">@{skill.author.username}</p></div></Link>
             {skill.contributors.length ? <div className="mt-4 border-t border-white/[0.07] pt-4"><p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-faint">مشارکت‌کنندگان</p><div className="space-y-2">{skill.contributors.map((contributor) => <Link key={contributor.id} href={`/users/${contributor.username}`} className="flex items-center gap-2 rounded-lg p-1.5 outline-none transition-colors hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-primary/60"><Avatar src={contributor.avatar} fallback={contributor.displayName} alt="" size="xs" /><span className="text-xs font-medium text-slate-300">{contributor.displayName}</span><Badge variant="green" className="ms-auto">Contributor</Badge></Link>)}</div></div> : null}
           </Card>
-          <Card className="space-y-3 p-5 text-xs text-muted"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><Star className="size-4" />امتیاز جامعه</span><strong className="text-white">{skill.stats.ratingAverage.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><GitFork className="size-4" />فورک‌ها</span><strong className="text-white">{skill.stats.forks.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span>ابزارها</span><strong className="text-white">{skill.tools.length.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span>وابستگی‌ها</span><strong className="text-white">{skill.dependencies.length.toLocaleString("fa-IR")}</strong></div></Card>
+          <Card className="space-y-3 p-5 text-xs text-muted"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><Star className="size-4" />امتیاز جامعه</span><strong className="text-white">{skill.stats.ratingAverage.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><GitPullRequestArrow className="size-4" />بهبودهای پذیرفته‌شده</span><strong className="text-white">{skill.stats.forks.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span>ابزارها</span><strong className="text-white">{skill.tools.length.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span>وابستگی‌ها</span><strong className="text-white">{skill.dependencies.length.toLocaleString("fa-IR")}</strong></div></Card>
         </aside>
       </div>
     </div>

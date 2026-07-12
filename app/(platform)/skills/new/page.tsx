@@ -6,5 +6,5 @@ export const metadata = { title: "ساخت مهارت" };
 
 export default async function NewSkillPage() {
   await requireUser();
-  return <div className="space-y-7"><PageHeader eyebrow="دانش قابل استفاده" title="ساخت یک مهارت" description="دانش، دستورالعمل، گردش کار و ابزارها را در یک بسته حرفه‌ای تعریف کنید." breadcrumbs={[{ label: "مهارت‌ها", href: "/skills" }, { label: "ساخت مهارت" }]} /><CreateSkillForm /></div>;
+  return <div className="space-y-7"><PageHeader eyebrow="دانش قابل استفاده" title="ساخت یک مهارت" description="دانش، دستورالعمل، گردش کار و ابزارها را در یک بسته حرفه‌ای تعریف کنید." breadcrumbs={[{ label: "کاوش مهارت‌ها", href: "/explore?type=skills" }, { label: "ساخت مهارت" }]} /><CreateSkillForm /></div>;
 }

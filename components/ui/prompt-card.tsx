@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bookmark, GitFork, Heart, Sparkles, Star } from "lucide-react";
+import { Bookmark, GitPullRequestArrow, Heart, Sparkles, Star } from "lucide-react";
 
 import { Avatar } from "./avatar";
 import { Badge } from "./badge";
@@ -151,9 +151,9 @@ export function PromptCard({
             label="ذخیره‌ها"
           />
           <Stat
-            icon={<GitFork />}
+            icon={<GitPullRequestArrow />}
             value={(stats.forks ?? 0).toLocaleString("fa-IR")}
-            label="فورک‌ها"
+            label="بهبودهای پذیرفته‌شده"
           />
           {typeof stats.rating === "number" ? (
             <Stat

@@ -4,8 +4,6 @@ import {
   GitPullRequestArrow,
   Home,
   MessageCircle,
-  PanelsTopLeft,
-  Shapes,
   UserRound,
 } from "lucide-react";
 
@@ -20,8 +18,6 @@ export interface NavigationItem {
 export const primaryNavigation: NavigationItem[] = [
   { label: "خانه", href: "/", icon: Home, exact: true },
   { label: "کاوش", href: "/explore", icon: Compass },
-  { label: "پرامپت‌ها", href: "/prompts", icon: PanelsTopLeft },
-  { label: "مهارت‌ها", href: "/skills", icon: Shapes },
   {
     label: "پیشنهادهای بهبود",
     href: "/improvements",

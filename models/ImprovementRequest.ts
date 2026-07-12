@@ -27,11 +27,6 @@ const ImprovementRequestSchema = new Schema(
     },
     ownerId: objectId("User"),
     proposerId: objectId("User"),
-    forkId: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      refPath: "targetType",
-    },
     baseVersionModel: {
       type: String,
       enum: ["PromptVersion", "SkillVersion"],
@@ -82,7 +77,7 @@ const ImprovementRequestSchema = new Schema(
 ImprovementRequestSchema.index({ ownerId: 1, status: 1, lastActivityAt: -1 });
 ImprovementRequestSchema.index({ proposerId: 1, status: 1, lastActivityAt: -1 });
 ImprovementRequestSchema.index({ targetType: 1, targetId: 1, createdAt: -1 });
-ImprovementRequestSchema.index({ forkId: 1, status: 1 });
+ImprovementRequestSchema.index({ targetType: 1, targetId: 1, proposerId: 1, status: 1 });
 
 export type ImprovementRequestDocument = InferSchemaType<typeof ImprovementRequestSchema>;
 
