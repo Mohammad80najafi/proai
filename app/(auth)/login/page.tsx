@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import { AuthCard } from "@/features/auth/components/auth-card";
 import { LoginForm } from "@/features/auth/components/login-form";
-import { getAuthHref, getSafeRedirectPath } from "@/lib/auth/redirect";
+import { getSafeRedirectPath } from "@/lib/auth/redirect";
 
 export const metadata: Metadata = {
   title: "ورود",
@@ -20,15 +20,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <AuthCard
-      eyebrow="خوش برگشتید"
-      title="دوباره به جریان ساخت برگردید"
-      description="برای دنبال‌کردن سازندگان، ذخیره محتوا و ادامه گفت‌وگوهای بهبود وارد حساب خود شوید."
-      alternateLabel="هنوز حساب ندارید؟"
-      alternateAction="ساخت حساب"
-      alternateHref={getAuthHref("/register", redirectTo)}
+      eyebrow="ورود امن با کد یک‌بارمصرف"
+      title="ورود یا ساخت حساب"
+      description="شماره موبایل ایرانی خود را وارد کنید؛ حساب‌های موجود مستقیم وارد می‌شوند و کاربران تازه پس از تأیید شماره، پروفایل خود را کامل می‌کنند."
     >
       <LoginForm redirectTo={redirectTo} />
     </AuthCard>
   );
 }
-

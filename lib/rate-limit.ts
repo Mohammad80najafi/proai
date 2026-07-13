@@ -31,7 +31,7 @@ export async function getClientAddress(): Promise<string> {
 
 /**
  * A Mongo-backed fixed-window limiter. Subjects are hashed before storage so
- * email addresses, user ids, and client addresses are not retained in plain text.
+ * phone numbers, user ids, and client addresses are not retained in plain text.
  */
 export async function consumeRateLimit({
   scope,

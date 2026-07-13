@@ -8,6 +8,7 @@ export * from "@/models/ImprovementRequest";
 export * from "@/models/Interaction";
 export * from "@/models/Moderation";
 export * from "@/models/Notification";
+export * from "@/models/OtpChallenge";
 export * from "@/models/NewsComment";
 export * from "@/models/NewsArticle";
 export * from "@/models/Prompt";

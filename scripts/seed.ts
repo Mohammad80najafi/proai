@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 
 import { loadEnvConfig } from "@next/env";
-import bcrypt from "bcryptjs";
 import mongoose, { Types } from "mongoose";
 
 import { AIAnalysis, AIJob } from "../models/AI";
@@ -15,6 +14,7 @@ import {
 import { Like, Rating, Reaction, Save } from "../models/Interaction";
 import { Block, ModerationAction, Report } from "../models/Moderation";
 import { Notification } from "../models/Notification";
+import { OtpChallenge } from "../models/OtpChallenge";
 import { NewsArticle } from "../models/NewsArticle";
 import { Prompt } from "../models/Prompt";
 import { PromptVersion } from "../models/PromptVersion";
@@ -41,19 +41,15 @@ type SeedDocument = {
 const id = (key: string) =>
   new Types.ObjectId(createHash("sha256").update(`proai-seed:${key}`).digest("hex").slice(0, 24));
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
-const DEVELOPMENT_SEED_PASSWORD = "ProAI-Dev-1405!";
-
 function getSeedSafety(): {
   isDevelopment: boolean;
-  password: string;
   seedPrivilegedDemoUser: boolean;
 } {
   // `npm run seed` intentionally treats an unset NODE_ENV as local development.
   // Any explicitly production-like environment must opt in and supply a unique
-  // password before the script can connect to MongoDB or mutate data.
+  // explicit confirmation before the script can connect to MongoDB or mutate data.
   const runtimeEnvironment = process.env.NODE_ENV?.trim() || "development";
   const isDevelopment = runtimeEnvironment === "development";
-  const password = process.env.SEED_DEFAULT_PASSWORD || DEVELOPMENT_SEED_PASSWORD;
 
   if (!isDevelopment) {
     if (process.env.ALLOW_NON_DEVELOPMENT_SEED !== "true") {
@@ -63,23 +59,60 @@ function getSeedSafety(): {
       );
     }
 
-    if (
-      !process.env.SEED_DEFAULT_PASSWORD ||
-      password === DEVELOPMENT_SEED_PASSWORD ||
-      password.length < 16
-    ) {
-      throw new Error(
-        "Non-development seeding requires an explicit, unique SEED_DEFAULT_PASSWORD of at least 16 characters.",
-      );
-    }
   }
 
   return {
     isDevelopment,
-    password,
     seedPrivilegedDemoUser:
       isDevelopment || process.env.SEED_ENABLE_PRIVILEGED_DEMO_USER === "true",
   };
+}
+
+async function migrateLegacyUserAuthentication(isDevelopment: boolean): Promise<void> {
+  const missingPhoneUsers = await User.collection
+    .find(
+      {
+        $or: [
+          { phoneNumber: { $exists: false } },
+          { phoneNumber: null },
+          { phoneNumber: "" },
+        ],
+      },
+      { projection: { _id: 1, username: 1 } },
+    )
+    .sort({ _id: 1 })
+    .toArray();
+
+  if (missingPhoneUsers.length > 0 && !isDevelopment) {
+    throw new Error(
+      `${missingPhoneUsers.length} users do not have a phone number. ` +
+        "Assign verified Iranian mobile numbers before running a non-development seed.",
+    );
+  }
+
+  if (missingPhoneUsers.length > 0) {
+    const usedPhoneNumbers = new Set(
+      (await User.collection.distinct("phoneNumber", { phoneNumber: { $type: "string" } })) as string[],
+    );
+    let sequence = 1;
+
+    for (const user of missingPhoneUsers) {
+      let phoneNumber: string;
+      do {
+        phoneNumber = `+98990${String(sequence).padStart(7, "0")}`;
+        sequence += 1;
+      } while (usedPhoneNumbers.has(phoneNumber));
+
+      await User.collection.updateOne({ _id: user._id }, { $set: { phoneNumber } });
+      usedPhoneNumbers.add(phoneNumber);
+      console.log(`Assigned development phone ${phoneNumber} to @${String(user.username)}.`);
+    }
+  }
+
+  await User.collection.updateMany(
+    {},
+    { $unset: { email: "", passwordHash: "" } },
+  );
 }
 
 async function upsertDocuments(
@@ -109,7 +142,7 @@ async function upsertDocuments(
 }
 
 async function seed(): Promise<void> {
-  const { isDevelopment, password, seedPrivilegedDemoUser } = getSeedSafety();
+  const { isDevelopment, seedPrivilegedDemoUser } = getSeedSafety();
   const mongoUri = process.env.MONGODB_URI || DEFAULT_MONGODB_URI;
   await mongoose.connect(mongoUri, {
     bufferCommands: false,
@@ -119,8 +152,6 @@ async function seed(): Promise<void> {
   // Reconcile the pre-MVP prompt-only save index before inserting polymorphic saves.
   // This preserves existing documents while allowing prompt and skill saves to coexist.
   await Save.syncIndexes();
-
-  const passwordHash = await bcrypt.hash(password, 10);
 
   const users = {
     architect: id("user:architect"),
@@ -153,8 +184,7 @@ async function seed(): Promise<void> {
     {
       _id: users.architect,
       username: "sara-architect",
-      email: "sara@proai.local",
-      passwordHash,
+      phoneNumber: "+989121111111",
       displayName: "سارا معمار",
       avatar: null,
       bio: "معمار سامانه‌های هوش مصنوعی و علاقه‌مند به ساخت ابزارهای متن‌باز فارسی.",
@@ -171,8 +201,7 @@ async function seed(): Promise<void> {
     {
       _id: users.builder,
       username: "amir-builder",
-      email: "amir@proai.local",
-      passwordHash,
+      phoneNumber: "+989122222222",
       displayName: "امیر سازنده",
       avatar: null,
       bio: "توسعه‌دهنده فول‌استک؛ تمرکزم روی تجربه توسعه‌دهنده و کیفیت نرم‌افزار است.",
@@ -189,8 +218,7 @@ async function seed(): Promise<void> {
     {
       _id: users.researcher,
       username: "niloofar-lab",
-      email: "niloofar@proai.local",
-      passwordHash,
+      phoneNumber: "+989123333333",
       displayName: "نیلوفر پژوهشگر",
       avatar: null,
       bio: "پژوهشگر تجربه کاربری و ارزیابی خروجی مدل‌های زبانی.",
@@ -207,8 +235,7 @@ async function seed(): Promise<void> {
     {
       _id: users.moderator,
       username: "proai-team",
-      email: "team@proai.local",
-      passwordHash,
+      phoneNumber: "+989124444444",
       displayName: "تیم پروای‌آی",
       avatar: null,
       bio: "تیم نگه‌داری و راهنمای جامعه پروای‌آی.",
@@ -223,6 +250,8 @@ async function seed(): Promise<void> {
       createdAt: new Date("2025-09-01T06:00:00.000Z"),
     },
   ]);
+
+  await migrateLegacyUserAuthentication(isDevelopment);
 
   const architectContent = `نقش شما: معمار ارشد سامانه‌های هوش مصنوعی هستید.
 
@@ -439,7 +468,7 @@ async function seed(): Promise<void> {
   // The seed is also the local-development schema bootstrap. Reconciliation keeps
   // indexes aligned when an earlier MVP schema already exists without deleting data.
   await Promise.all([
-    User.syncIndexes(), Session.syncIndexes(), Prompt.syncIndexes(), PromptVersion.syncIndexes(),
+    User.syncIndexes(), Session.syncIndexes(), OtpChallenge.syncIndexes(), Prompt.syncIndexes(), PromptVersion.syncIndexes(),
     Skill.syncIndexes(), SkillVersion.syncIndexes(), ImprovementRequest.syncIndexes(),
     ImprovementDiscussionMessage.syncIndexes(), Comment.syncIndexes(), Like.syncIndexes(),
     Reaction.syncIndexes(), Save.syncIndexes(), Rating.syncIndexes(), Follow.syncIndexes(),
@@ -450,11 +479,8 @@ async function seed(): Promise<void> {
   ]);
 
   console.log("ProAI Persian development data seeded successfully.");
-  console.log("Accounts: sara@proai.local, amir@proai.local, niloofar@proai.local");
-  if (isDevelopment) {
-    console.log(`Development password: ${password}`);
-  } else {
-    console.log("The non-development seed password was supplied through the environment and was not printed.");
+  console.log("Accounts: 09121111111, 09122222222, 09123333333");
+  if (!isDevelopment) {
     if (!seedPrivilegedDemoUser) {
       console.log("The proai-team demo account was seeded without moderator or admin roles.");
     }

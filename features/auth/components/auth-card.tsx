@@ -6,9 +6,9 @@ type AuthCardProps = {
   eyebrow: string;
   title: string;
   description: string;
-  alternateLabel: string;
-  alternateAction: string;
-  alternateHref: string;
+  alternateLabel?: string;
+  alternateAction?: string;
+  alternateHref?: string;
   children: ReactNode;
 };
 
@@ -49,18 +49,19 @@ export function AuthCard({
 
         {children}
 
-        <footer className="mt-6 border-t border-white/[0.07] pt-5 text-center text-sm text-slate-400">
-          <span>{alternateLabel}</span>{" "}
-          <Link
-            href={alternateHref}
-            className="inline-flex items-center gap-1 font-semibold text-indigo-300 transition-colors hover:text-indigo-200"
-          >
-            {alternateAction}
-            <ArrowLeft className="size-3.5" aria-hidden="true" />
-          </Link>
-        </footer>
+        {alternateLabel && alternateAction && alternateHref ? (
+          <footer className="mt-6 border-t border-white/[0.07] pt-5 text-center text-sm text-slate-400">
+            <span>{alternateLabel}</span>{" "}
+            <Link
+              href={alternateHref}
+              className="inline-flex items-center gap-1 font-semibold text-indigo-300 transition-colors hover:text-indigo-200"
+            >
+              {alternateAction}
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+            </Link>
+          </footer>
+        ) : null}
       </div>
     </section>
   );
 }
-

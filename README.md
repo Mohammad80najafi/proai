@@ -6,7 +6,7 @@ This repository contains the working MVP foundation. It runs entirely against a 
 
 ## What is included
 
-- Email/password authentication with opaque, database-backed sessions
+- Passwordless Iranian mobile authentication with expiring one-time codes and opaque, database-backed sessions
 - Public profiles, follows, reputation ranks, achievements, and leaderboards
 - Prompt and skill creation with immutable official version histories
 - Explore, search, categories, tags, likes, saves, ratings, comments, and forks
@@ -26,7 +26,7 @@ This repository contains the working MVP foundation. It runs entirely against a 
 | Web | Next.js 16 App Router, React 19, TypeScript strict mode |
 | UI | Tailwind CSS 4, Motion, Lucide React, Vazirmatn |
 | Data | MongoDB Community Edition 8, Mongoose 9 |
-| Authentication | bcrypt password hashes, hashed opaque session tokens, HTTP-only cookies |
+| Authentication | HMAC-hashed OTP challenges, hashed opaque session tokens, HTTP-only cookies |
 | Realtime | Socket.IO gateway plus `/api/messages` fallback |
 | AI | OpenAI Responses API, Ollama, or local heuristic analysis |
 | Validation | Zod at action and provider boundaries |
@@ -91,16 +91,16 @@ The seed is idempotent: it upserts stable demo records and reconciles the develo
 
 ## Demo accounts
 
-All seeded accounts use `SEED_DEFAULT_PASSWORD`. With the example environment, the password is `ProAI-Dev-1405!`.
+Enter any seeded mobile number on the login page. With `OTP_PROVIDER=console`, the six-digit development code is printed by the server and shown in the local form.
 
-| Account | Email | Username |
+| Account | Iranian mobile number | Username |
 | --- | --- | --- |
-| Prompt and skill owner | `sara@proai.local` | `sara-architect` |
-| Fork contributor | `amir@proai.local` | `amir-builder` |
-| Research creator | `niloofar@proai.local` | `niloofar-lab` |
-| Seeded moderator/admin identity | `team@proai.local` | `proai-team` |
+| Prompt and skill owner | `09121111111` | `sara-architect` |
+| Fork contributor | `09122222222` | `amir-builder` |
+| Research creator | `09123333333` | `niloofar-lab` |
+| Seeded moderator/admin identity | `09124444444` | `proai-team` |
 
-These credentials and privileged demo roles are for local development only. The seed refuses to run when `NODE_ENV` is anything other than `development` unless `ALLOW_NON_DEVELOPMENT_SEED=true` and a unique `SEED_DEFAULT_PASSWORD` of at least 16 characters is supplied. In that exceptional mode, the `proai-team` account remains a normal user unless `SEED_ENABLE_PRIVILEGED_DEMO_USER=true` is also set. The non-development password is never printed.
+These identities and privileged demo roles are for local development only. The seed assigns deterministic placeholder Iranian mobile numbers to any legacy local users that do not have one, removes legacy email/password credentials, and refuses to invent phone identities outside development. The seed refuses to run when `NODE_ENV` is anything other than `development` unless `ALLOW_NON_DEVELOPMENT_SEED=true`; in that exceptional mode, the `proai-team` account remains a normal user unless `SEED_ENABLE_PRIVILEGED_DEMO_USER=true` is also set.
 
 ## Environment variables
 
@@ -112,6 +112,10 @@ APP_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_REALTIME_URL=http://localhost:3001
 REALTIME_PORT=3001
+
+OTP_PROVIDER=console
+KAVENEGAR_API_KEY=
+KAVENEGAR_OTP_TEMPLATE=proai-otp
 
 AI_PROVIDER=disabled
 OPENAI_API_KEY=
@@ -224,7 +228,7 @@ Security-sensitive authorization is performed beside each data mutation, not onl
 - MongoDB is intentionally local-only. Cloud migration is not configured.
 - Presence is held in one realtime process; horizontal scaling needs a shared Socket.IO adapter.
 - Uploaded avatars are stored under `public/uploads/avatars`; shared deployments need durable object storage.
-- Registration currently omits email verification, password reset, and multi-factor authentication.
+- Local development exposes the OTP in the form; production must use `OTP_PROVIDER=kavenegar` with a valid API key and approved Lookup template.
 - Administration covers the core moderation workflow; bulk actions and configurable policy automation remain outside this MVP.
 - The current automated suite is a foundation and should be expanded with browser-level and transaction integration tests before a public launch.
 

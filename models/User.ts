@@ -30,18 +30,11 @@ const UserSchema = new Schema(
       maxlength: 30,
       match: usernamePattern,
     },
-    email: {
+    phoneNumber: {
       type: String,
       required: true,
-      unique: true,
-      lowercase: true,
       trim: true,
-      maxlength: 254,
-      select: false,
-    },
-    passwordHash: {
-      type: String,
-      required: true,
+      match: /^\+989\d{9}$/,
       select: false,
     },
     displayName: {
@@ -84,6 +77,13 @@ const UserSchema = new Schema(
 );
 
 UserSchema.index(
+  { phoneNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { phoneNumber: { $type: "string" } },
+  },
+);
+UserSchema.index(
   { username: "text", displayName: "text", bio: "text" },
   {
     name: "user_profile_search",
@@ -98,4 +98,3 @@ export type UserDocument = InferSchemaType<typeof UserSchema>;
 export const User =
   (models.User as Model<UserDocument> | undefined) ??
   model<UserDocument>("User", UserSchema);
-
