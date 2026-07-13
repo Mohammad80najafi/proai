@@ -17,7 +17,6 @@ export type AppShellUser = {
   displayName: string;
   username: string;
   avatar?: string | null;
-  rank?: string;
   roles?: readonly string[];
 };
 

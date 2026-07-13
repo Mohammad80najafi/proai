@@ -20,7 +20,6 @@ export interface DesktopSidebarProps {
     displayName: string;
     username: string;
     avatar?: string | null;
-    rank?: string;
   };
   footer?: ReactNode;
   className?: string;
@@ -122,7 +121,7 @@ export function DesktopSidebar({
                   {user.displayName}
                 </span>
                 <span className="mt-1 block truncate text-[10px] text-slate-600">
-                  {user.rank ?? "سازنده"}
+                  @{user.username}
                 </span>
               </span>
             </Link>

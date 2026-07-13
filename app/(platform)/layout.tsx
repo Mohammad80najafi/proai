@@ -22,7 +22,6 @@ export default async function PlatformLayout({ children }: { children: React.Rea
         username: user.username,
         displayName: user.displayName,
         avatar: user.avatar,
-        rank: user.rank,
         roles: user.roles,
       } : undefined}
     >

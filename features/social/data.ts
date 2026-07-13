@@ -7,14 +7,12 @@ import { Achievement, ReputationEvent, UserAchievement } from "@/models/Reputati
 import { Skill } from "@/models/Skill";
 import { User } from "@/models/User";
 import { connectToDatabase } from "@/lib/db";
-import { REPUTATION_RANKS } from "@/lib/constants";
 import type { ContentCardDTO, NotificationDTO, UserSummary } from "@/features/shared/types";
 
 type RawUser = { _id: unknown; username: string; displayName: string; avatar?: string | null; bio?: string; rank: string; reputationScore: number; stats?: { followers?: number; following?: number; prompts?: number; skills?: number; acceptedImprovements?: number }; createdAt: Date };
 
 export type ProfileDTO = {
   user: UserSummary & { bio: string; createdAt: string; stats: { followers: number; following: number; prompts: number; skills: number; acceptedImprovements: number } };
-  rankLabel: string;
   isOwnProfile: boolean;
   isFollowing: boolean;
   prompts: ContentCardDTO[];
@@ -45,7 +43,6 @@ export async function getProfile(username: string, viewerId?: string | null): Pr
   const categoryLabels: Record<string, string> = { development: "برنامه‌نویسی", writing: "تولید محتوا", design: "طراحی", business: "کسب‌وکار", education: "آموزش", research: "تحقیق", productivity: "بهره‌وری", other: "سایر" };
   return {
     user: { ...author, bio: user.bio ?? "", createdAt: user.createdAt.toISOString(), stats: stats(user.stats) },
-    rankLabel: REPUTATION_RANKS.find((item) => item.key === user.rank)?.label ?? "تازه‌کار",
     isOwnProfile: viewerId === String(user._id), isFollowing: Boolean(following),
     prompts: promptRows.map((item) => ({ id: String(item._id), kind: "prompt", slug: item.slug, title: item.title, description: item.description, images: item.images ?? [], category: categoryLabels[item.category] ?? item.category, tags: item.tags, version: item.currentVersion, author, stats: contentStats(item.stats), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })),
     skills: skillRows.map((item) => ({ id: String(item._id), kind: "skill", slug: item.slug, title: item.name, description: item.description, images: item.images ?? [], category: "مهارت", tags: item.tags, version: item.currentVersion, author, stats: contentStats(item.stats), createdAt: item.createdAt.toISOString(), updatedAt: item.updatedAt.toISOString() })),

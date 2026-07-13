@@ -1,24 +1,24 @@
-import Link from "next/link";
-import { GitPullRequestArrow, MessagesSquare, ShieldCheck, Sparkles } from "lucide-react";
+import { Fingerprint, KeyRound, ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 
+import { Logo } from "@/components/ui/logo";
 import { getOptionalUser } from "@/lib/auth/dal";
 
-const benefits = [
+const trustPoints = [
   {
-    icon: GitPullRequestArrow,
-    title: "بهبود جمعی، نسخه‌های شفاف",
-    description: "هر پیشنهاد بهبود با گفت‌وگو، تاریخچه و اعتبار سازنده ثبت می‌شود.",
+    icon: KeyRound,
+    title: "بدون نیاز به گذرواژه",
+    description: "ورود با کد یک‌بارمصرف ۶ رقمی انجام می‌شود.",
   },
   {
-    icon: MessagesSquare,
-    title: "گفت‌وگو در بستر کار",
-    description: "با سازنده پرامپت یا مهارت، دقیقاً کنار درخواست بهبود صحبت کنید.",
+    icon: Fingerprint,
+    title: "نشست تحت کنترل شما",
+    description: "هر زمان بخواهید می‌توانید از حساب خود خارج شوید.",
   },
   {
     icon: ShieldCheck,
-    title: "هویت و دسترسی امن",
-    description: "نشست‌های قابل ابطال و سطح دسترسی روشن، پایه همکاری قابل اعتماد است.",
+    title: "شماره موبایل خصوصی می‌ماند",
+    description: "شماره شما در پروفایل عمومی نمایش داده نمی‌شود.",
   },
 ] as const;
 
@@ -32,48 +32,39 @@ export default async function AuthLayout({
   }
 
   return (
-    <main className="min-h-screen lg:grid lg:grid-cols-[minmax(22rem,0.82fr)_minmax(34rem,1.18fr)]">
-      <aside className="relative hidden overflow-hidden border-l border-white/[0.07] bg-[#0a0e17] px-10 py-12 lg:flex lg:flex-col xl:px-16">
-        <div className="absolute -right-28 top-8 size-80 rounded-full bg-indigo-500/[0.08] blur-3xl" />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_75%_10%,rgba(79,70,229,0.08),transparent_24rem)] lg:grid lg:grid-cols-[minmax(24rem,0.9fr)_minmax(32rem,1.1fr)]">
+      <aside className="relative hidden overflow-hidden border-l border-white/[0.07] bg-[#090d16] px-10 py-10 lg:flex lg:flex-col xl:px-16 xl:py-12">
+        <div className="pointer-events-none absolute -right-40 -top-36 size-[32rem] rounded-full border border-indigo-300/[0.08]" />
+        <div className="pointer-events-none absolute -right-24 -top-20 size-80 rounded-full border border-indigo-300/[0.08]" />
+        <div className="pointer-events-none absolute right-24 top-28 size-2 rounded-full bg-indigo-300/70 shadow-[0_0_30px_8px_rgba(129,140,248,0.2)]" />
 
-        <Link
-          href="/"
-          className="relative inline-flex w-fit items-center gap-3"
-          aria-label="بازگشت به صفحه اصلی ProAI"
-        >
-          <span className="grid size-10 place-items-center rounded-[14px] border border-indigo-400/25 bg-indigo-500/15 text-indigo-300">
-            <Sparkles className="size-5" aria-hidden="true" />
-          </span>
-          <span className="text-lg font-bold tracking-tight" dir="ltr">
-            ProAI
-          </span>
-        </Link>
+        <Logo className="relative w-fit" />
 
-        <div className="relative my-auto max-w-lg py-12">
-          <p className="mb-4 text-sm font-semibold text-indigo-300">
-            هاب هوش مصنوعی متن‌باز
+        <div className="relative my-auto max-w-lg py-10">
+          <p className="mb-4 text-xs font-semibold tracking-wide text-indigo-300">
+            ورود به فضای همکاری
           </p>
-          <h2 className="balanced-text text-3xl font-bold leading-[1.55] tracking-tight text-white xl:text-4xl">
-            دانش هوش مصنوعی را با هم بسازیم، بهتر کنیم و به اشتراک بگذاریم.
+          <h2 className="balanced-text text-3xl font-black leading-[1.55] tracking-[-0.035em] text-white xl:text-[2.65rem]">
+            یک شماره، یک کد، و مسیر شما در ProAI ادامه پیدا می‌کند.
           </h2>
           <p className="pretty-text mt-5 max-w-md text-sm leading-8 text-slate-400">
-            جایی برای پرامپت‌ها، مهارت‌ها و همکاری‌هایی که هر نسخه را از نسخه قبل دقیق‌تر می‌کنند.
+            برای ساخت و بهبود پرامپت‌ها، اشتراک مهارت‌ها و گفت‌وگو با سازندگان وارد شوید.
           </p>
 
-          <div className="mt-10 grid gap-5">
-            {benefits.map((benefit) => {
-              const Icon = benefit.icon;
+          <div className="mt-9 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025]">
+            {trustPoints.map((point) => {
+              const Icon = point.icon;
               return (
-                <div key={benefit.title} className="flex gap-4">
-                  <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.04] text-indigo-300">
+                <div key={point.title} className="flex gap-4 border-b border-white/[0.06] p-4 last:border-b-0">
+                  <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-indigo-400/[0.09] text-indigo-300">
                     <Icon className="size-4" aria-hidden="true" />
                   </span>
                   <div>
                     <h3 className="text-sm font-semibold text-slate-100">
-                      {benefit.title}
+                      {point.title}
                     </h3>
                     <p className="mt-1 text-xs leading-6 text-slate-500">
-                      {benefit.description}
+                      {point.description}
                     </p>
                   </div>
                 </div>
@@ -82,12 +73,13 @@ export default async function AuthLayout({
           </div>
         </div>
 
-        <p className="relative text-xs text-slate-600">
-          ساخته‌شده برای جامعه فارسی‌زبان هوش مصنوعی
-        </p>
+        <div className="relative flex items-center gap-2 text-[11px] text-slate-600">
+          <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+          دسترسی امن برای جامعه فارسی‌زبان هوش مصنوعی
+        </div>
       </aside>
 
-      <div className="flex min-h-screen items-start justify-center px-4 py-8 sm:items-center sm:px-8 sm:py-12">
+      <div className="flex min-h-screen items-start justify-center px-4 py-6 sm:items-center sm:px-8 sm:py-12">
         {children}
       </div>
     </main>

@@ -20,9 +20,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <AuthCard
-      eyebrow="ورود امن با کد یک‌بارمصرف"
+      eyebrow="ورود امن به ProAI"
       title="ورود یا ساخت حساب"
-      description="شماره موبایل ایرانی خود را وارد کنید؛ حساب‌های موجود مستقیم وارد می‌شوند و کاربران تازه پس از تأیید شماره، پروفایل خود را کامل می‌کنند."
+      description="شماره موبایل خود را وارد کنید تا کد ۶ رقمی ورود برایتان ارسال شود."
     >
       <LoginForm redirectTo={redirectTo} />
     </AuthCard>

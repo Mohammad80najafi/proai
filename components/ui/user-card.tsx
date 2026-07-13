@@ -3,26 +3,15 @@ import Link from "next/link";
 import { Award, Users } from "lucide-react";
 
 import { Avatar } from "./avatar";
-import { Badge, type BadgeVariant } from "./badge";
 import { ButtonLink } from "./button";
 import { Card } from "./card";
 import { cn } from "./cn";
-
-const rankColors: Record<string, BadgeVariant> = {
-  "تازه‌کار": "neutral",
-  کاوشگر: "blue",
-  سازنده: "green",
-  مهندس: "indigo",
-  معمار: "orange",
-  "استاد هوش مصنوعی": "red",
-};
 
 export interface UserCardProps {
   username: string;
   displayName: string;
   bio?: string;
   avatar?: string | null;
-  rank?: string;
   contributionScore?: number;
   followers?: number;
   prompts?: number;
@@ -37,7 +26,6 @@ export function UserCard({
   displayName,
   bio,
   avatar,
-  rank = "تازه‌کار",
   contributionScore = 0,
   followers = 0,
   prompts = 0,
@@ -57,9 +45,6 @@ export function UserCard({
         >
           <Avatar src={avatar} alt={displayName} fallback={displayName} size="lg" />
         </Link>
-        <Badge variant={rankColors[rank] ?? "indigo"} dot>
-          {rank}
-        </Badge>
       </div>
 
       <div className="mt-4 min-w-0">
