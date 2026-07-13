@@ -1,3 +1,8 @@
+import "server-only";
+
+import { connectToDatabase } from "@/lib/db";
+import { NewsArticle } from "@/models/NewsArticle";
+
 export type NewsSection = {
   heading: string;
   paragraphs: readonly string[];
@@ -21,9 +26,13 @@ export type NewsStory = {
   accentText: string;
   sections: readonly NewsSection[];
   takeaways: readonly string[];
+  status?: "draft" | "published";
+  managed?: boolean;
+  publishedAt?: string;
+  accentTheme?: "mint" | "sky" | "amber" | "violet";
 };
 
-export const newsStories = [
+export const defaultNewsStories = [
   {
     id: "00",
     slug: "gpt-5-6-frontier-model-family",
@@ -213,9 +222,107 @@ export const newsStories = [
   },
 ] as const satisfies readonly NewsStory[];
 
-export const leadStory = newsStories[0];
-export const homeNewsItems = newsStories.slice(1);
+const accentThemes = {
+  mint: { accent: "bg-[#caffdf]", accentSoft: "bg-[#caffdf]/10", accentText: "text-[#8effc1]" },
+  sky: { accent: "bg-[#c9dcff]", accentSoft: "bg-[#c9dcff]/10", accentText: "text-[#c9dcff]" },
+  amber: { accent: "bg-[#ffd6ad]", accentSoft: "bg-[#ffd6ad]/10", accentText: "text-[#ffd6ad]" },
+  violet: { accent: "bg-[#e8d2ff]", accentSoft: "bg-[#e8d2ff]/10", accentText: "text-[#e8d2ff]" },
+} as const;
 
-export function getNewsStory(slug: string) {
-  return newsStories.find((story) => story.slug === slug);
+type RawNewsArticle = {
+  _id: unknown;
+  slug: string;
+  title: string;
+  summary: string;
+  category: string;
+  source: string;
+  sourceUrl: string;
+  coverImage: string;
+  readTimeMinutes: number;
+  sections: Array<{ heading: string; paragraphs: string[] }>;
+  takeaways: string[];
+  status: "draft" | "published";
+  featured: boolean;
+  accentTheme: keyof typeof accentThemes;
+  publishedAt?: Date | null;
+  deletedAt?: Date | null;
+};
+
+const fullDate = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+const shortDate = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+  month: "long",
+  day: "numeric",
+});
+
+function serializeManagedStory(row: RawNewsArticle): NewsStory {
+  const publishedAt = row.publishedAt ?? new Date();
+  const theme = accentThemes[row.accentTheme] ?? accentThemes.mint;
+  return {
+    id: String(row._id),
+    slug: row.slug,
+    featured: row.featured,
+    category: row.category,
+    date: shortDate.format(publishedAt),
+    dateFull: fullDate.format(publishedAt),
+    readTime: `${row.readTimeMinutes.toLocaleString("fa-IR")} دقیقه`,
+    source: row.source,
+    title: row.title,
+    summary: row.summary,
+    sourceUrl: row.sourceUrl,
+    coverImage: row.coverImage,
+    ...theme,
+    sections: row.sections,
+    takeaways: row.takeaways,
+    status: row.status,
+    managed: true,
+    publishedAt: publishedAt.toISOString(),
+    accentTheme: row.accentTheme,
+  };
+}
+
+function defaultStoryWithState(story: NewsStory): NewsStory {
+  return { ...story, status: "published", managed: false };
+}
+
+export async function getNewsStories({ includeDrafts = false }: { includeDrafts?: boolean } = {}) {
+  try {
+    await connectToDatabase();
+    const rows = await NewsArticle.find()
+      .sort({ featured: -1, publishedAt: -1, createdAt: -1 })
+      .lean<RawNewsArticle[]>();
+    const managedBySlug = new Map(rows.map((row) => [row.slug, row]));
+    const merged: NewsStory[] = [];
+
+    for (const defaultStory of defaultNewsStories) {
+      const managed = managedBySlug.get(defaultStory.slug);
+      if (managed) {
+        managedBySlug.delete(defaultStory.slug);
+        if (managed.deletedAt || (!includeDrafts && managed.status !== "published")) continue;
+        merged.push(serializeManagedStory(managed));
+      } else {
+        merged.push(defaultStoryWithState(defaultStory));
+      }
+    }
+    for (const row of managedBySlug.values()) {
+      if (row.deletedAt || (!includeDrafts && row.status !== "published")) continue;
+      merged.push(serializeManagedStory(row));
+    }
+
+    return merged.sort((a, b) => {
+      if (Boolean(a.featured) !== Boolean(b.featured)) return a.featured ? -1 : 1;
+      return (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "");
+    });
+  } catch (error) {
+    console.error("News data load failed; using editorial defaults", error);
+    return defaultNewsStories.map(defaultStoryWithState);
+  }
+}
+
+export async function getNewsStory(slug: string, options: { includeDrafts?: boolean } = {}) {
+  const stories = await getNewsStories(options);
+  return stories.find((story) => story.slug === slug);
 }

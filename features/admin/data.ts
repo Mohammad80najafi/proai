@@ -4,6 +4,7 @@ import { Types, type QueryFilter } from "mongoose";
 
 import { requireRole } from "@/lib/auth/dal";
 import { connectToDatabase } from "@/lib/db";
+import { getNewsStories } from "@/features/news/data";
 import { Comment } from "@/models/Comment";
 import { ModerationAction, Report, type ReportDocument } from "@/models/Moderation";
 import { Prompt, type PromptDocument } from "@/models/Prompt";
@@ -16,6 +17,7 @@ import type {
   AdminAuditRow,
   AdminContentRow,
   AdminMetric,
+  AdminNewsRow,
   AdminReportRow,
   AdminUserRow,
 } from "./types";
@@ -376,4 +378,29 @@ export async function getAdminReports(params: { status?: string; query?: string 
     };
   });
   return { reports, total };
+}
+
+export async function getAdminNews(params: { query?: string; status?: string }) {
+  await requireRole("admin");
+  const query = params.query?.trim().toLocaleLowerCase("fa-IR") ?? "";
+  const status = params.status === "draft" || params.status === "published"
+    ? params.status
+    : undefined;
+  const stories = await getNewsStories({ includeDrafts: true });
+  const news: AdminNewsRow[] = stories
+    .filter((story) => !status || story.status === status)
+    .filter((story) => !query || [story.title, story.slug, story.source, story.category].some((value) => value.toLocaleLowerCase("fa-IR").includes(query)))
+    .map((story) => ({
+      id: story.id,
+      slug: story.slug,
+      title: story.title,
+      category: story.category,
+      source: story.source,
+      coverImage: story.coverImage,
+      status: story.status ?? "published",
+      featured: Boolean(story.featured),
+      managed: Boolean(story.managed),
+      dateFull: story.dateFull,
+    }));
+  return { news, total: news.length };
 }

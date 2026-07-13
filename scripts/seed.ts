@@ -15,6 +15,7 @@ import {
 import { Like, Rating, Reaction, Save } from "../models/Interaction";
 import { Block, ModerationAction, Report } from "../models/Moderation";
 import { Notification } from "../models/Notification";
+import { NewsArticle } from "../models/NewsArticle";
 import { Prompt } from "../models/Prompt";
 import { PromptVersion } from "../models/PromptVersion";
 import { RateLimit } from "../models/RateLimit";
@@ -445,7 +446,7 @@ async function seed(): Promise<void> {
     Notification.syncIndexes(), Conversation.syncIndexes(), ConversationMember.syncIndexes(),
     Message.syncIndexes(), ReputationEvent.syncIndexes(), Achievement.syncIndexes(),
     UserAchievement.syncIndexes(), AIJob.syncIndexes(), AIAnalysis.syncIndexes(), RateLimit.syncIndexes(),
-    Report.syncIndexes(), Block.syncIndexes(), ModerationAction.syncIndexes(),
+    Report.syncIndexes(), Block.syncIndexes(), ModerationAction.syncIndexes(), NewsArticle.syncIndexes(),
   ]);
 
   console.log("ProAI Persian development data seeded successfully.");

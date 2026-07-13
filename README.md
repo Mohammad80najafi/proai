@@ -16,7 +16,7 @@ This repository contains the working MVP foundation. It runs entirely against a 
 - Persian AI prompt analysis and enhancement with six quality dimensions
 - Direct messages with unread counts, typing state, presence, and an HTTP fallback
 - Notifications, profile settings, messaging privacy, and validated avatar uploads
-- Role-protected administration console for users, content moderation, reports, and audited decisions
+- Role-protected administration console for users, content moderation, reports, audited decisions, and a news desk with draft, publish, edit, and delete controls
 - Premium Persian RTL UI using Vazirmatn, Lucide icons, Motion, and Tailwind CSS
 
 ## Technology

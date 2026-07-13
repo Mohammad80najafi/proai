@@ -13,7 +13,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 
-import { homeNewsItems, leadStory, newsStories } from "@/features/news/data";
+import { getNewsStories, type NewsStory } from "@/features/news/data";
 
 const topics = [
   { label: "مدل‌های زبانی", count: "۱۲ مطلب", tone: "bg-[#caffdf]" },
@@ -35,8 +35,8 @@ function ReadingMeta({ date, readTime }: { date: string; readTime: string }) {
   );
 }
 
-function EditorialPulse() {
-  const pulseStories = homeNewsItems.slice(0, 3);
+function EditorialPulse({ stories }: { stories: NewsStory[] }) {
+  const pulseStories = stories.slice(0, 3);
 
   return (
     <section
@@ -99,7 +99,17 @@ function EditorialPulse() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const newsStories = await getNewsStories();
+  const leadStory = newsStories[0];
+  const homeNewsItems = newsStories.slice(1);
+  if (!leadStory) {
+    return (
+      <div className="grid min-h-[55vh] place-items-center text-center">
+        <div><Radio className="mx-auto size-8 text-faint" /><h1 className="mt-5 text-3xl font-black">اتاق خبر در حال آماده‌سازی است</h1><p className="mt-3 text-sm text-muted">به‌زودی خبرهای تازه اینجا منتشر می‌شوند.</p></div>
+      </div>
+    );
+  }
   const secondaryStories = homeNewsItems.slice(0, 2);
   const feedStories = homeNewsItems.slice(2);
 
@@ -130,7 +140,7 @@ export default function HomePage() {
         </nav>
       </header>
 
-      <EditorialPulse />
+      <EditorialPulse stories={homeNewsItems} />
 
       <section className="home-reveal home-reveal-delay-1 grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,.55fr)]" aria-label="داستان‌های اصلی">
         <Link

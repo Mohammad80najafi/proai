@@ -9,6 +9,7 @@ export * from "@/models/Interaction";
 export * from "@/models/Moderation";
 export * from "@/models/Notification";
 export * from "@/models/NewsComment";
+export * from "@/models/NewsArticle";
 export * from "@/models/Prompt";
 export * from "@/models/PromptVersion";
 export * from "@/models/RateLimit";

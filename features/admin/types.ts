@@ -1,4 +1,4 @@
-export type AdminSection = "overview" | "users" | "content" | "reports";
+export type AdminSection = "overview" | "users" | "content" | "news" | "reports";
 
 export type AdminMetric = {
   key: string;
@@ -65,4 +65,17 @@ export type AdminAuditRow = {
   targetModel: string;
   note: string;
   createdAt: string;
+};
+
+export type AdminNewsRow = {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  source: string;
+  coverImage: string;
+  status: "draft" | "published";
+  featured: boolean;
+  managed: boolean;
+  dateFull: string;
 };

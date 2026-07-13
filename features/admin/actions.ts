@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { Types } from "mongoose";
 import { z } from "zod";
 
+import { getNewsStory } from "@/features/news/data";
 import type { ActionState } from "@/features/shared/action-state";
 import { requireRole } from "@/lib/auth/dal";
 import { connectToDatabase } from "@/lib/db";
+import { makeSlug } from "@/lib/format";
 import { ModerationAction, Report } from "@/models/Moderation";
+import { NewsArticle } from "@/models/NewsArticle";
 import { Prompt } from "@/models/Prompt";
 import { Session } from "@/models/Session";
 import { Skill } from "@/models/Skill";
@@ -34,6 +37,29 @@ const reportResolutionSchema = z.object({
   decision: z.enum(["resolved", "dismissed"]),
   resolution: z.string().trim().max(2_000).default(""),
 });
+const newsEditorSchema = z.object({
+  slug: z.string().trim().max(180).default(""),
+  title: z.string().trim().min(5, "عنوان باید دست‌کم ۵ نویسه باشد.").max(220),
+  summary: z.string().trim().min(10, "خلاصه باید دست‌کم ۱۰ نویسه باشد.").max(1_200),
+  category: z.string().trim().min(2).max(80),
+  source: z.string().trim().min(2).max(100),
+  sourceUrl: z.url("پیوند منبع معتبر نیست.").max(2_048),
+  coverImage: z.string().trim().regex(/^\/(?:images|uploads)\/news\/[a-z0-9._/-]+$/i, "مسیر تصویر باید از پوشه news باشد."),
+  readTimeMinutes: z.coerce.number().int().min(1).max(120),
+  status: z.enum(["draft", "published"]),
+  featured: z.preprocess((value) => value === "on" || value === "true", z.boolean()),
+  accentTheme: z.enum(["mint", "sky", "amber", "violet"]),
+  publishedAt: z.string().trim().default(""),
+  sectionHeading1: z.string().trim().min(2).max(180),
+  sectionParagraphs1: z.string().trim().min(10).max(24_000),
+  sectionHeading2: z.string().trim().max(180).default(""),
+  sectionParagraphs2: z.string().trim().max(24_000).default(""),
+  takeaways: z.string().trim().max(4_000).default(""),
+});
+const updateNewsSchema = newsEditorSchema.extend({
+  originalSlug: z.string().trim().min(1).max(180),
+});
+const deleteNewsSchema = z.object({ slug: z.string().trim().min(1).max(180) });
 
 function values(formData: FormData) {
   return Object.fromEntries(formData.entries());
@@ -52,6 +78,43 @@ function failed(error: unknown): AdminActionState {
   return {
     status: "error",
     message: "عملیات انجام نشد. دوباره تلاش کنید.",
+  };
+}
+
+function newsSections(input: z.infer<typeof newsEditorSchema>) {
+  const paragraphs = (value: string) => value.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean);
+  return [
+    { heading: input.sectionHeading1, paragraphs: paragraphs(input.sectionParagraphs1) },
+    ...(input.sectionHeading2 && input.sectionParagraphs2
+      ? [{ heading: input.sectionHeading2, paragraphs: paragraphs(input.sectionParagraphs2) }]
+      : []),
+  ];
+}
+
+function newsTakeaways(value: string) {
+  return value.split("\n").map((item) => item.trim()).filter(Boolean).slice(0, 8);
+}
+
+function newsPayload(input: z.infer<typeof newsEditorSchema>, slug: string, authorId: string) {
+  const requestedDate = input.publishedAt ? new Date(input.publishedAt) : new Date();
+  const publishedAt = Number.isNaN(requestedDate.getTime()) ? new Date() : requestedDate;
+  return {
+    slug,
+    title: input.title,
+    summary: input.summary,
+    category: input.category,
+    source: input.source,
+    sourceUrl: input.sourceUrl,
+    coverImage: input.coverImage,
+    readTimeMinutes: input.readTimeMinutes,
+    sections: newsSections(input),
+    takeaways: newsTakeaways(input.takeaways),
+    status: input.status,
+    featured: input.featured,
+    accentTheme: input.accentTheme,
+    authorId: new Types.ObjectId(authorId),
+    publishedAt: input.status === "published" ? publishedAt : null,
+    deletedAt: null,
   };
 }
 
@@ -277,4 +340,149 @@ export async function resolveReportAction(
     message: parsed.data.decision === "resolved" ? "گزارش رسیدگی شد." : "گزارش رد شد.",
     data: { id: parsed.data.reportId },
   };
+}
+
+export async function createNewsAction(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const admin = await requireRole("admin");
+  const parsed = newsEditorSchema.safeParse(values(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const slug = parsed.data.slug || makeSlug(parsed.data.title);
+  if (!slug) return { status: "error", message: "برای خبر یک شناسه معتبر وارد کنید." };
+  if (await getNewsStory(slug, { includeDrafts: true })) {
+    return { status: "error", message: "خبری با این شناسه از قبل وجود دارد." };
+  }
+
+  try {
+    const database = await connectToDatabase();
+    const articleId = new Types.ObjectId();
+    await database.connection.transaction(async (session) => {
+      await NewsArticle.create(
+        [{ _id: articleId, ...newsPayload(parsed.data, slug, admin.id) }],
+        { session },
+      );
+      await ModerationAction.create(
+        [{ moderatorId: admin.id, targetModel: "NewsArticle", targetId: articleId, action: "news-created", note: parsed.data.title }],
+        { session },
+      );
+    });
+    revalidatePath("/");
+    revalidatePath(`/news/${slug}`);
+    revalidatePath("/admin");
+    return { status: "success", message: "خبر ساخته شد.", data: { id: slug } };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function updateNewsAction(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const admin = await requireRole("admin");
+  const parsed = updateNewsSchema.safeParse(values(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const existing = await getNewsStory(parsed.data.originalSlug, { includeDrafts: true });
+  if (!existing) return { status: "error", message: "خبر برای ویرایش پیدا نشد." };
+
+  try {
+    const database = await connectToDatabase();
+    await database.connection.transaction(async (session) => {
+      const managed = await NewsArticle.findOne({ slug: parsed.data.originalSlug })
+        .select("_id")
+        .session(session);
+      const articleId = managed?._id ?? new Types.ObjectId();
+      await NewsArticle.updateOne(
+        { slug: parsed.data.originalSlug },
+        {
+          $set: newsPayload(parsed.data, parsed.data.originalSlug, admin.id),
+          $setOnInsert: { _id: articleId },
+        },
+        { upsert: true, session },
+      );
+      await ModerationAction.create(
+        [{ moderatorId: admin.id, targetModel: "NewsArticle", targetId: articleId, action: "news-updated", note: parsed.data.title }],
+        { session },
+      );
+    });
+    revalidatePath("/");
+    revalidatePath(`/news/${parsed.data.originalSlug}`);
+    revalidatePath("/admin");
+    return { status: "success", message: "خبر به‌روزرسانی شد.", data: { id: parsed.data.originalSlug } };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function deleteNewsAction(
+  _previousState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const admin = await requireRole("admin");
+  const parsed = deleteNewsSchema.safeParse(values(formData));
+  if (!parsed.success) return invalid(parsed.error);
+  const existing = await getNewsStory(parsed.data.slug, { includeDrafts: true });
+  if (!existing) return { status: "error", message: "خبر پیدا نشد." };
+
+  try {
+    const database = await connectToDatabase();
+    await database.connection.transaction(async (session) => {
+      const managed = await NewsArticle.findOne({ slug: parsed.data.slug })
+        .select("_id")
+        .session(session);
+      const articleId = managed?._id ?? new Types.ObjectId();
+      const tombstonePayload = newsPayload(
+        {
+          slug: existing.slug,
+          title: existing.title,
+          summary: existing.summary,
+          category: existing.category,
+          source: existing.source,
+          sourceUrl: existing.sourceUrl,
+          coverImage: existing.coverImage,
+          readTimeMinutes: 5,
+          status: "draft",
+          featured: false,
+          accentTheme: existing.accentTheme ?? "mint",
+          publishedAt: "",
+          sectionHeading1: existing.sections[0]?.heading ?? "متن خبر",
+          sectionParagraphs1: existing.sections[0]?.paragraphs.join("\n\n") ?? existing.summary,
+          sectionHeading2: existing.sections[1]?.heading ?? "",
+          sectionParagraphs2: existing.sections[1]?.paragraphs.join("\n\n") ?? "",
+          takeaways: existing.takeaways.join("\n"),
+        },
+        existing.slug,
+        admin.id,
+      );
+      const tombstoneInsert = Object.fromEntries(
+        Object.entries(tombstonePayload).filter(([key]) => key !== "deletedAt" && key !== "status"),
+      );
+      await NewsArticle.updateOne(
+        { slug: parsed.data.slug },
+        {
+          $set: {
+            deletedAt: new Date(),
+            status: "draft",
+          },
+          $setOnInsert: {
+            _id: articleId,
+            ...tombstoneInsert,
+          },
+        },
+        { upsert: true, session },
+      );
+      await ModerationAction.create(
+        [{ moderatorId: admin.id, targetModel: "NewsArticle", targetId: articleId, action: "news-deleted", note: existing.title }],
+        { session },
+      );
+    });
+    revalidatePath("/");
+    revalidatePath(`/news/${parsed.data.slug}`);
+    revalidatePath("/admin");
+    return { status: "success", message: "خبر حذف شد.", data: { id: parsed.data.slug } };
+  } catch (error) {
+    return failed(error);
+  }
 }

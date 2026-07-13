@@ -69,7 +69,7 @@ const ModerationActionSchema = new Schema(
     moderatorId: objectId("User"),
     targetModel: {
       type: String,
-      enum: ["User", "Prompt", "Skill", "Comment", "Report"],
+      enum: ["User", "Prompt", "Skill", "Comment", "Report", "NewsArticle"],
       required: true,
     },
     targetId: {
@@ -85,6 +85,9 @@ const ModerationActionSchema = new Schema(
         "content-status-updated",
         "report-resolved",
         "report-dismissed",
+        "news-created",
+        "news-updated",
+        "news-deleted",
       ],
       required: true,
     },

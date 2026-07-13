@@ -34,7 +34,7 @@ export async function addNewsCommentAction(
     };
   }
 
-  if (!getNewsStory(parsed.data.storySlug)) {
+  if (!(await getNewsStory(parsed.data.storySlug))) {
     return { status: "error", message: "این خبر پیدا نشد." };
   }
 

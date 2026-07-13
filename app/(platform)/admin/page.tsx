@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -9,6 +10,9 @@ import {
   Clock3,
   FileWarning,
   Flag,
+  Newspaper,
+  Pencil,
+  Plus,
   Search,
   ShieldCheck,
   Sparkles,
@@ -17,7 +21,7 @@ import {
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/form-controls";
 import {
@@ -26,8 +30,10 @@ import {
   UserRoleControl,
   UserStatusControl,
 } from "@/features/admin/admin-controls";
+import { DeleteNewsButton } from "@/features/admin/news-editor-form";
 import {
   getAdminContent,
+  getAdminNews,
   getAdminOverview,
   getAdminReports,
   getAdminUsers,
@@ -63,6 +69,7 @@ const sections: Array<{
   { key: "overview", label: "نمای عملیات", description: "نبض سامانه", icon: CircleGauge },
   { key: "users", label: "کاربران", description: "دسترسی و وضعیت", icon: UsersRound },
   { key: "content", label: "محتوا", description: "کنترل انتشار", icon: BookOpenCheck },
+  { key: "news", label: "اخبار", description: "میز تحریریه", icon: Newspaper },
   { key: "reports", label: "گزارش‌ها", description: "صف رسیدگی", icon: Flag },
 ];
 
@@ -98,6 +105,9 @@ const auditActionLabels: Record<string, string> = {
   "content-status-updated": "وضعیت محتوا تغییر کرد",
   "report-resolved": "گزارش رسیدگی شد",
   "report-dismissed": "گزارش رد شد",
+  "news-created": "خبر ساخته شد",
+  "news-updated": "خبر ویرایش شد",
+  "news-deleted": "خبر حذف شد",
 };
 
 function sectionFrom(value?: string): AdminSection {
@@ -115,7 +125,7 @@ function statusVariant(status: string): BadgeVariant {
 
 function AdminSectionNav({ active }: { active: AdminSection }) {
   return (
-    <nav aria-label="بخش‌های مدیریت" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+    <nav aria-label="بخش‌های مدیریت" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
       {sections.map((section) => {
         const Icon = section.icon;
         const selected = active === section.key;
@@ -287,13 +297,15 @@ function FilterBar({
   return (
     <form method="get" className="grid gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3 sm:grid-cols-[minmax(220px,1fr)_170px_150px_auto] sm:items-end">
       <input type="hidden" name="view" value={view} />
-      <Input name="q" defaultValue={query} placeholder={view === "users" ? "نام یا نام کاربری" : view === "reports" ? "متن توضیحات گزارش" : "عنوان یا شناسه محتوا"} startIcon={<Search />} label="جست‌وجو" />
+      <Input name="q" defaultValue={query} placeholder={view === "users" ? "نام یا نام کاربری" : view === "reports" ? "متن توضیحات گزارش" : view === "news" ? "عنوان، منبع یا دسته‌بندی" : "عنوان یا شناسه محتوا"} startIcon={<Search />} label="جست‌وجو" />
       <Select name="status" defaultValue={status ?? ""} label="وضعیت">
         <option value="">همه وضعیت‌ها</option>
         {view === "users" ? (
           <><option value="active">فعال</option><option value="suspended">تعلیق‌شده</option><option value="deleted">حذف‌شده</option></>
         ) : view === "content" ? (
           <><option value="visible">قابل نمایش</option><option value="under-review">در حال بررسی</option><option value="removed">حذف از نمایش</option></>
+        ) : view === "news" ? (
+          <><option value="draft">پیش‌نویس</option><option value="published">منتشرشده</option></>
         ) : (
           <><option value="open">باز</option><option value="reviewing">در حال رسیدگی</option><option value="resolved">رسیدگی‌شده</option><option value="dismissed">ردشده</option></>
         )}
@@ -363,6 +375,43 @@ function ContentView({ data, params }: { data: Awaited<ReturnType<typeof getAdmi
   );
 }
 
+function NewsView({ data, params }: { data: Awaited<ReturnType<typeof getAdminNews>>; params: { q?: string; status?: string } }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1"><FilterBar view="news" query={params.q} status={params.status} /></div>
+        <ButtonLink href="/admin/news/new" className="sm:mb-3"><Plus className="size-4" />خبر تازه</ButtonLink>
+      </div>
+      <div className="flex items-center justify-between px-1 text-xs text-slate-600"><span>{formatNumber(data.total)} خبر در میز تحریریه</span><span>پیش‌نویس‌ها فقط برای مدیران دیده می‌شوند</span></div>
+      <Card className="overflow-hidden">
+        <div className="hidden grid-cols-[96px_minmax(260px,1.5fr)_120px_210px] gap-4 border-b border-white/[0.07] px-5 py-3 text-[10px] font-semibold text-slate-600 lg:grid">
+          <span>جلد</span><span>خبر</span><span>انتشار</span><span>عملیات</span>
+        </div>
+        <div className="divide-y divide-white/[0.06]">
+          {data.news.map((story) => (
+            <div key={story.slug} className="grid gap-4 px-5 py-4 [content-visibility:auto] [contain-intrinsic-size:0_104px] lg:grid-cols-[96px_minmax(260px,1.5fr)_120px_210px] lg:items-center">
+              <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-black/20">
+                <Image src={story.coverImage} alt="" fill sizes="96px" className="object-cover" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2"><Badge variant={story.status === "published" ? "green" : "orange"} dot>{story.status === "published" ? "منتشرشده" : "پیش‌نویس"}</Badge>{story.featured ? <Badge variant="indigo">داستان اصلی</Badge> : null}{!story.managed ? <Badge>خبر اولیه</Badge> : null}</div>
+                <Link href={`/news/${story.slug}`} className="mt-2 block truncate text-sm font-semibold hover:text-indigo-200">{story.title}</Link>
+                <p className="mt-1 text-[10px] text-slate-600">{story.category} · {story.source}</p>
+              </div>
+              <div className="text-[10px] leading-6 text-slate-500">{story.dateFull}<br /><span dir="ltr">/{story.slug}</span></div>
+              <div className="flex flex-wrap items-center gap-2">
+                <ButtonLink href={`/admin/news/${story.slug}/edit`} variant="outline" size="sm"><Pencil className="size-3.5" />ویرایش</ButtonLink>
+                <DeleteNewsButton slug={story.slug} title={story.title} />
+              </div>
+            </div>
+          ))}
+          {!data.news.length ? <p className="p-8 text-center text-sm text-slate-600">خبری با این فیلتر پیدا نشد.</p> : null}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function ReportCard({ report }: { report: AdminReportRow }) {
   const closed = report.status === "resolved" || report.status === "dismissed";
   return (
@@ -407,7 +456,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
       ? await getAdminUsers({ query: params.q, status: params.status })
       : view === "content"
         ? await getAdminContent({ query: params.q, status: params.status, type: params.type })
-        : await getAdminReports({ query: params.q, status: params.status });
+        : view === "news"
+          ? await getAdminNews({ query: params.q, status: params.status })
+          : await getAdminReports({ query: params.q, status: params.status });
   const activeSection = sections.find((section) => section.key === view) ?? sections[0];
   const ActiveIcon = activeSection.icon;
 
@@ -440,6 +491,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
       {view === "overview" ? <OverviewView data={data as Awaited<ReturnType<typeof getAdminOverview>>} /> : null}
       {view === "users" ? <UsersView data={data as Awaited<ReturnType<typeof getAdminUsers>>} currentAdminId={currentUser.id} params={{ q: params.q, status: params.status }} /> : null}
       {view === "content" ? <ContentView data={data as Awaited<ReturnType<typeof getAdminContent>>} params={{ q: params.q, status: params.status, type: params.type }} /> : null}
+      {view === "news" ? <NewsView data={data as Awaited<ReturnType<typeof getAdminNews>>} params={{ q: params.q, status: params.status }} /> : null}
       {view === "reports" ? <ReportsView data={data as Awaited<ReturnType<typeof getAdminReports>>} params={{ q: params.q, status: params.status }} /> : null}
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-5 text-[10px] text-slate-700">

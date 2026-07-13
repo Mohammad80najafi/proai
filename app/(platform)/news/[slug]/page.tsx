@@ -17,7 +17,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ArticleActions } from "@/features/news/article-actions";
 import { NewsCommentForm } from "@/features/news/comment-form";
 import { getNewsComments } from "@/features/news/comment-data";
-import { getNewsStory, newsStories } from "@/features/news/data";
+import { getNewsStories, getNewsStory } from "@/features/news/data";
 import { getOptionalUser } from "@/lib/auth/dal";
 import { formatRelativeDate } from "@/lib/format";
 
@@ -25,13 +25,9 @@ type NewsPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
-  return newsStories.map((story) => ({ slug: story.slug }));
-}
-
 export async function generateMetadata({ params }: NewsPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const story = getNewsStory(slug);
+  const story = await getNewsStory(slug);
 
   if (!story) return {};
 
@@ -50,15 +46,16 @@ export async function generateMetadata({ params }: NewsPageProps): Promise<Metad
 
 export default async function NewsDetailPage({ params }: NewsPageProps) {
   const { slug } = await params;
-  const story = getNewsStory(slug);
+  const [stories, user] = await Promise.all([
+    getNewsStories(),
+    getOptionalUser().catch(() => null),
+  ]);
+  const story = stories.find((item) => item.slug === slug);
 
   if (!story) notFound();
 
-  const [user, comments] = await Promise.all([
-    getOptionalUser().catch(() => null),
-    getNewsComments(story.slug).catch(() => []),
-  ]);
-  const relatedStories = newsStories.filter((item) => item.slug !== story.slug).slice(0, 3);
+  const comments = await getNewsComments(story.slug).catch(() => []);
+  const relatedStories = stories.filter((item) => item.slug !== story.slug).slice(0, 3);
 
   return (
     <article className="home-reveal pb-12">
