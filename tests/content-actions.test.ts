@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
   improvementCreate: vi.fn(),
   discussionCreate: vi.fn(),
   userUpdateOne: vi.fn(),
+  userFind: vi.fn(),
+  commentFindOne: vi.fn(),
+  commentCreate: vi.fn(),
+  commentUpdateOne: vi.fn(),
   createNotification: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
@@ -61,13 +65,25 @@ vi.mock("@/models/ImprovementRequest", () => ({
     create: mocks.discussionCreate,
   },
 }));
-vi.mock("@/models/User", () => ({ User: { updateOne: mocks.userUpdateOne } }));
+vi.mock("@/models/Comment", () => ({
+  Comment: {
+    findOne: mocks.commentFindOne,
+    create: mocks.commentCreate,
+    updateOne: mocks.commentUpdateOne,
+  },
+}));
+vi.mock("@/models/User", () => ({
+  User: { find: mocks.userFind, updateOne: mocks.userUpdateOne },
+}));
 vi.mock("@/features/content/mutation-services", () => ({
   awardReputation: vi.fn(),
   createNotification: mocks.createNotification,
 }));
 
-import { openImprovementRequestAction } from "@/features/content/actions";
+import {
+  addCommentAction,
+  openImprovementRequestAction,
+} from "@/features/content/actions";
 
 describe("openImprovementRequestAction", () => {
   beforeEach(() => {
@@ -147,5 +163,106 @@ describe("openImprovementRequestAction", () => {
     expect(mocks.redirect).toHaveBeenCalledWith(
       `/improvements/${String(createdRequest._id)}`,
     );
+  });
+});
+
+describe("addCommentAction replies", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.requireUser.mockResolvedValue({
+      id: new Types.ObjectId(),
+      username: "replier",
+      roles: [],
+    });
+    mocks.transaction.mockImplementation(
+      async (callback: (session: typeof mocks.session) => Promise<void>) => {
+        await callback(mocks.session);
+      },
+    );
+    mocks.userFind.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        session: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    mocks.commentCreate.mockResolvedValue([]);
+    mocks.commentUpdateOne.mockResolvedValue({ modifiedCount: 1 });
+    mocks.promptUpdateOne.mockResolvedValue({ modifiedCount: 1 });
+    mocks.createNotification.mockResolvedValue(undefined);
+  });
+
+  it("keeps a reply-to-reply in the root thread and notifies the addressed user", async () => {
+    const targetId = new Types.ObjectId();
+    const ownerId = new Types.ObjectId();
+    const rootId = new Types.ObjectId();
+    const repliedToId = new Types.ObjectId();
+    const repliedToUserId = new Types.ObjectId();
+    mocks.promptFindOne.mockReturnValue({
+      session: vi.fn().mockResolvedValue({
+        _id: targetId,
+        slug: "test-prompt",
+        creatorId: ownerId,
+        stats: { comments: 2 },
+      }),
+    });
+    mocks.commentFindOne.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        session: vi.fn().mockResolvedValue({
+          _id: repliedToId,
+          userId: repliedToUserId,
+          parentId: rootId,
+        }),
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set("targetType", "Prompt");
+    formData.set("targetId", String(targetId));
+    formData.set("parentId", String(repliedToId));
+    formData.set("content", "این هم ادامه گفت‌وگو");
+
+    const result = await addCommentAction({ status: "idle" }, formData);
+
+    expect(result.status).toBe("success");
+    const createdComment = mocks.commentCreate.mock.calls[0]?.[0]?.[0];
+    expect(String(createdComment.parentId)).toBe(String(rootId));
+    expect(mocks.commentUpdateOne).toHaveBeenCalledWith(
+      { _id: rootId, status: "visible" },
+      { $inc: { replyCount: 1 } },
+      { session: mocks.session },
+    );
+    expect(mocks.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientId: repliedToUserId,
+        title: "پاسخ تازه‌ای به دیدگاه شما داده شد",
+      }),
+    );
+  });
+
+  it("rejects a reply when the parent is not visible on the same content", async () => {
+    const targetId = new Types.ObjectId();
+    mocks.promptFindOne.mockReturnValue({
+      session: vi.fn().mockResolvedValue({
+        _id: targetId,
+        slug: "test-prompt",
+        creatorId: new Types.ObjectId(),
+        stats: { comments: 1 },
+      }),
+    });
+    mocks.commentFindOne.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        session: vi.fn().mockResolvedValue(null),
+      }),
+    });
+
+    const formData = new FormData();
+    formData.set("targetType", "Prompt");
+    formData.set("targetId", String(targetId));
+    formData.set("parentId", String(new Types.ObjectId()));
+    formData.set("content", "پاسخ نامعتبر");
+
+    const result = await addCommentAction({ status: "idle" }, formData);
+
+    expect(result).toMatchObject({ status: "error" });
+    expect(mocks.commentCreate).not.toHaveBeenCalled();
   });
 });

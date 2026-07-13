@@ -717,6 +717,9 @@ export async function addCommentAction(
   const parsed = commentSchema.safeParse(formDataObject(formData));
   if (!parsed.success) return validationState(parsed.error);
   const targetId = toObjectId(parsed.data.targetId, "شناسه محتوا");
+  const requestedParentId = parsed.data.parentId
+    ? new Types.ObjectId(parsed.data.parentId)
+    : null;
   const commentId = new Types.ObjectId();
   let slug = "";
 
@@ -726,6 +729,23 @@ export async function addCommentAction(
       const target = await visibleTarget(parsed.data.targetType, targetId, session);
       if (!target) throw new PublicActionError("محتوا پیدا نشد یا در دسترس نیست.");
       slug = target.slug;
+
+      const parent = requestedParentId
+        ? await Comment.findOne({
+            _id: requestedParentId,
+            targetType: parsed.data.targetType,
+            targetId,
+            status: "visible",
+          })
+            .select("_id userId parentId")
+            .session(session)
+        : null;
+      if (requestedParentId && !parent) {
+        throw new PublicActionError("دیدگاهی که می‌خواهید به آن پاسخ دهید در دسترس نیست.");
+      }
+      const threadRootId = parent
+        ? new Types.ObjectId(String(parent.parentId ?? parent._id))
+        : null;
 
       const usernames = mentionedUsernames(parsed.data.content);
       const mentionedUsers = usernames.length
@@ -744,6 +764,7 @@ export async function addCommentAction(
             userId: user.id,
             targetType: parsed.data.targetType,
             targetId,
+            parentId: threadRootId,
             content: parsed.data.content,
             mentions,
           },
@@ -756,24 +777,36 @@ export async function addCommentAction(
         { "stats.comments": (target.stats?.comments ?? 0) + 1 },
         session,
       );
+      if (threadRootId) {
+        await Comment.updateOne(
+          { _id: threadRootId, status: "visible" },
+          { $inc: { replyCount: 1 } },
+          { session },
+        );
+      }
 
       const segment = parsed.data.targetType === "Prompt" ? "prompts" : "skills";
       const href = `/${segment}/${target.slug}#comment-${commentId}`;
+      const primaryRecipientId = parent?.userId ?? target.creatorId;
       await createNotification({
-        recipientId: target.creatorId,
+        recipientId: primaryRecipientId,
         actorId: user.id,
         type: "comment",
-        title: "دیدگاه تازه‌ای دریافت کردید",
+        title: parent
+          ? "پاسخ تازه‌ای به دیدگاه شما داده شد"
+          : "دیدگاه تازه‌ای دریافت کردید",
         body: parsed.data.content.slice(0, 300),
         entityModel: "Comment",
         entityId: commentId,
         href,
-        dedupeKey: `comment-owner:${commentId}`,
+        dedupeKey: parent
+          ? `comment-reply:${commentId}`
+          : `comment-owner:${commentId}`,
         session,
       });
       await Promise.all(
         mentions
-          .filter((mentionedId) => String(mentionedId) !== String(target.creatorId))
+          .filter((mentionedId) => String(mentionedId) !== String(primaryRecipientId))
           .map((mentionedId) =>
             createNotification({
               recipientId: mentionedId,
@@ -797,7 +830,7 @@ export async function addCommentAction(
   revalidateContent(parsed.data.targetType, slug);
   return {
     status: "success",
-    message: "دیدگاه شما منتشر شد.",
+    message: requestedParentId ? "پاسخ شما منتشر شد." : "دیدگاه شما منتشر شد.",
     data: { id: String(commentId) },
   };
 }

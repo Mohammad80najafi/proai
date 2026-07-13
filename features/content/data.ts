@@ -381,7 +381,17 @@ export async function getComments(
 ): Promise<CommentDTO[]> {
   if (!Types.ObjectId.isValid(targetId)) return [];
   await connectToDatabase();
-  const comments = await Comment.find({
+  type RawComment = {
+    _id: unknown;
+    userId: unknown;
+    parentId?: unknown | null;
+    content: string;
+    createdAt: Date;
+    editedAt?: Date | null;
+    reactionCount?: number;
+  };
+
+  const roots = await Comment.find({
     targetType,
     targetId,
     parentId: null,
@@ -389,14 +399,19 @@ export async function getComments(
   })
     .sort({ createdAt: -1 })
     .limit(Math.min(limit, 100))
-    .lean<Array<{
-      _id: unknown;
-      userId: unknown;
-      content: string;
-      createdAt: Date;
-      editedAt?: Date | null;
-      reactionCount?: number;
-    }>>();
+    .lean<RawComment[]>();
+  if (!roots.length) return [];
+
+  const replies = await Comment.find({
+    targetType,
+    targetId,
+    parentId: { $in: roots.map((comment) => new Types.ObjectId(id(comment._id))) },
+    status: "visible",
+  })
+    .sort({ createdAt: 1 })
+    .limit(Math.min(limit, 100) * 100)
+    .lean<RawComment[]>();
+  const comments = [...roots, ...replies];
   const [users, liked] = await Promise.all([
     userMapFor(comments.map((comment) => comment.userId)),
     viewerId
@@ -406,7 +421,7 @@ export async function getComments(
       : Promise.resolve([]),
   ]);
   const likedIds = new Set(liked.map((item) => id(item.targetId)));
-  return comments.map((comment) => ({
+  const serializeComment = (comment: RawComment): CommentDTO => ({
     id: id(comment._id),
     content: comment.content,
     author: users.get(id(comment.userId)) ?? fallbackUser,
@@ -414,6 +429,19 @@ export async function getComments(
     editedAt: comment.editedAt ? date(comment.editedAt) : null,
     likes: comment.reactionCount ?? 0,
     isLiked: likedIds.has(id(comment._id)),
+    replies: [],
+  });
+  const repliesByRoot = new Map<string, CommentDTO[]>();
+  for (const reply of replies) {
+    const rootId = id(reply.parentId);
+    const threadReplies = repliesByRoot.get(rootId) ?? [];
+    threadReplies.push(serializeComment(reply));
+    repliesByRoot.set(rootId, threadReplies);
+  }
+
+  return roots.map((root) => ({
+    ...serializeComment(root),
+    replies: repliesByRoot.get(id(root._id)) ?? [],
   }));
 }
 

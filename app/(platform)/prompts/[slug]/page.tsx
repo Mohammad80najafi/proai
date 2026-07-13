@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Markdown } from "@/components/ui/markdown";
 import { CommentForm } from "@/features/content/comment-form";
+import { CommentThread } from "@/features/content/comment-thread";
 import { ContentActions } from "@/features/content/content-actions";
 import { ContentImageGallery } from "@/features/content/content-image-gallery";
 import { CopyButton } from "@/features/content/copy-button";
@@ -29,6 +30,10 @@ export default async function PromptDetailPage({ params }: Props) {
   const prompt = await getPromptBySlug(slug, user?.id ?? null).catch(() => null);
   if (!prompt) notFound();
   const comments = await getComments("Prompt", prompt.id, user?.id ?? null).catch(() => []);
+  const commentCount = comments.reduce(
+    (total, comment) => total + 1 + comment.replies.length,
+    0,
+  );
 
   return (
     <div className="space-y-7">
@@ -82,11 +87,10 @@ export default async function PromptDetailPage({ params }: Props) {
           </Card>
 
           <Card id="comments" className="p-5 sm:p-6">
-            <div className="mb-5 flex items-center gap-2"><MessageSquare className="size-4 text-primary" /><h2 className="font-semibold">گفت‌وگو ({comments.length.toLocaleString("fa-IR")})</h2></div>
+            <div className="mb-5 flex items-center gap-2"><MessageSquare className="size-4 text-primary" /><h2 className="font-semibold">گفت‌وگو ({commentCount.toLocaleString("fa-IR")})</h2></div>
             {user ? <CommentForm targetType="Prompt" targetId={prompt.id} /> : <p className="rounded-xl bg-white/[0.025] p-4 text-sm text-muted">برای نوشتن دیدگاه <Link href={`/login?next=/prompts/${slug}`} className="text-primary-strong">وارد شوید</Link>.</p>}
-            <div className="mt-6 divide-y divide-white/[0.06]">
-              {comments.map((comment) => <article key={comment.id} id={`comment-${comment.id}`} className="flex gap-3 py-5 first:pt-0 last:pb-0"><Avatar src={comment.author.avatar} fallback={comment.author.displayName} alt={comment.author.displayName} size="sm" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><Link href={`/users/${comment.author.username}`} className="text-sm font-semibold">{comment.author.displayName}</Link><span className="text-[10px] text-faint">{formatRelativeDate(comment.createdAt)}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300" dir="auto">{comment.content}</p></div></article>)}
-              {!comments.length ? <p className="py-5 text-center text-sm text-faint">هنوز دیدگاهی ثبت نشده است.</p> : null}
+            <div className="mt-6">
+              <CommentThread comments={comments} targetType="Prompt" targetId={prompt.id} canReply={Boolean(user)} loginHref={`/login?next=/prompts/${slug}`} />
             </div>
           </Card>
         </div>

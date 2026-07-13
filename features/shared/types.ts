@@ -109,6 +109,7 @@ export type CommentDTO = {
   editedAt: string | null;
   likes: number;
   isLiked: boolean;
+  replies: CommentDTO[];
 };
 
 export type ImprovementStatus =

@@ -74,6 +74,10 @@ export const createSkillSchema = z.object({
 export const commentSchema = z.object({
   targetType: z.enum(["Prompt", "Skill"]),
   targetId: z.string().trim().min(1),
+  parentId: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.string().trim().regex(/^[a-f\d]{24}$/i, "شناسه دیدگاه معتبر نیست.").optional(),
+  ),
   content: z.string().trim().min(2, "دیدگاه خیلی کوتاه است.").max(8_000),
 });
 

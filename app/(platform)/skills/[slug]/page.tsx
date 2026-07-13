@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Markdown } from "@/components/ui/markdown";
 import { CommentForm } from "@/features/content/comment-form";
+import { CommentThread } from "@/features/content/comment-thread";
 import { ContentActions } from "@/features/content/content-actions";
 import { ContentImageGallery } from "@/features/content/content-image-gallery";
 import { CopyButton } from "@/features/content/copy-button";
@@ -29,6 +30,10 @@ export default async function SkillDetailPage({ params }: Props) {
   const skill = await getSkillBySlug(slug, user?.id ?? null).catch(() => null);
   if (!skill) notFound();
   const comments = await getComments("Skill", skill.id, user?.id ?? null).catch(() => []);
+  const commentCount = comments.reduce(
+    (total, comment) => total + 1 + comment.replies.length,
+    0,
+  );
 
   return (
     <div className="space-y-7">
@@ -77,7 +82,7 @@ export default async function SkillDetailPage({ params }: Props) {
 
           <Card className="p-5 sm:p-6"><div className="mb-5 flex items-center gap-2"><History className="size-4 text-primary" /><h2 className="font-semibold">تاریخچه نسخه‌ها</h2></div><div className="space-y-4">{skill.versions.map((version) => <div key={version.id} className="flex items-start justify-between gap-4 border-b border-white/[0.055] pb-4 last:border-0 last:pb-0"><div><strong className="text-sm">نسخه {version.versionLabel}</strong><p className="mt-1 text-xs leading-6 text-muted">{version.changes}</p></div><span className="shrink-0 text-[10px] text-faint">{formatDate(version.createdAt)}</span></div>)}</div></Card>
 
-          <Card id="comments" className="p-5 sm:p-6"><div className="mb-5 flex items-center gap-2"><MessageSquare className="size-4 text-primary" /><h2 className="font-semibold">گفت‌وگو ({comments.length.toLocaleString("fa-IR")})</h2></div>{user ? <CommentForm targetType="Skill" targetId={skill.id} /> : <p className="rounded-xl bg-white/[0.025] p-4 text-sm text-muted">برای نوشتن دیدگاه <Link href={`/login?next=/skills/${slug}`} className="text-primary-strong">وارد شوید</Link>.</p>}<div className="mt-6 divide-y divide-white/[0.06]">{comments.map((comment) => <article key={comment.id} className="flex gap-3 py-5"><Avatar src={comment.author.avatar} fallback={comment.author.displayName} alt={comment.author.displayName} size="sm" /><div><div className="flex items-center gap-2"><Link href={`/users/${comment.author.username}`} className="text-sm font-semibold">{comment.author.displayName}</Link><span className="text-[10px] text-faint">{formatRelativeDate(comment.createdAt)}</span></div><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300">{comment.content}</p></div></article>)}{!comments.length ? <p className="py-5 text-center text-sm text-faint">هنوز دیدگاهی ثبت نشده است.</p> : null}</div></Card>
+          <Card id="comments" className="p-5 sm:p-6"><div className="mb-5 flex items-center gap-2"><MessageSquare className="size-4 text-primary" /><h2 className="font-semibold">گفت‌وگو ({commentCount.toLocaleString("fa-IR")})</h2></div>{user ? <CommentForm targetType="Skill" targetId={skill.id} /> : <p className="rounded-xl bg-white/[0.025] p-4 text-sm text-muted">برای نوشتن دیدگاه <Link href={`/login?next=/skills/${slug}`} className="text-primary-strong">وارد شوید</Link>.</p>}<div className="mt-6"><CommentThread comments={comments} targetType="Skill" targetId={skill.id} canReply={Boolean(user)} loginHref={`/login?next=/skills/${slug}`} /></div></Card>
         </div>
 
         <aside className="space-y-4 xl:sticky xl:top-24">
