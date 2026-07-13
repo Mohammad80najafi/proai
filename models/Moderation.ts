@@ -64,8 +64,41 @@ BlockSchema.index(
 );
 BlockSchema.index({ blockedId: 1, createdAt: -1 });
 
+const ModerationActionSchema = new Schema(
+  {
+    moderatorId: objectId("User"),
+    targetModel: {
+      type: String,
+      enum: ["User", "Prompt", "Skill", "Comment", "Report"],
+      required: true,
+    },
+    targetId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      refPath: "targetModel",
+    },
+    action: {
+      type: String,
+      enum: [
+        "user-status-updated",
+        "user-role-updated",
+        "content-status-updated",
+        "report-resolved",
+        "report-dismissed",
+      ],
+      required: true,
+    },
+    note: { type: String, trim: true, maxlength: 2_000, default: "" },
+    metadata: { type: Schema.Types.Mixed, default: {} },
+  },
+  timestampOptions,
+);
+ModerationActionSchema.index({ moderatorId: 1, createdAt: -1 });
+ModerationActionSchema.index({ targetModel: 1, targetId: 1, createdAt: -1 });
+
 export type ReportDocument = InferSchemaType<typeof ReportSchema>;
 export type BlockDocument = InferSchemaType<typeof BlockSchema>;
+export type ModerationActionDocument = InferSchemaType<typeof ModerationActionSchema>;
 
 export const Report =
   (models.Report as Model<ReportDocument> | undefined) ??
@@ -73,4 +106,6 @@ export const Report =
 export const Block =
   (models.Block as Model<BlockDocument> | undefined) ??
   model<BlockDocument>("Block", BlockSchema);
-
+export const ModerationAction =
+  (models.ModerationAction as Model<ModerationActionDocument> | undefined) ??
+  model<ModerationActionDocument>("ModerationAction", ModerationActionSchema);

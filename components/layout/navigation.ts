@@ -4,6 +4,7 @@ import {
   GitPullRequestArrow,
   Home,
   MessageCircle,
+  ShieldCheck,
   UserRound,
 } from "lucide-react";
 
@@ -33,6 +34,12 @@ export const mobileNavigation: NavigationItem[] = [
   { label: "پیام‌ها", href: "/messages", icon: MessageCircle },
   { label: "پروفایل", href: "/profile", icon: UserRound },
 ];
+
+export const adminNavigationItem: NavigationItem = {
+  label: "مدیریت",
+  href: "/admin",
+  icon: ShieldCheck,
+};
 
 export function isNavigationItemActive(item: NavigationItem, activePath?: string) {
   if (!activePath) return false;

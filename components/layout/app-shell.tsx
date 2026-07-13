@@ -5,7 +5,11 @@ import { usePathname } from "next/navigation";
 import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Topbar } from "@/components/layout/topbar";
-import { mobileNavigation, primaryNavigation } from "@/components/layout/navigation";
+import {
+  adminNavigationItem,
+  mobileNavigation,
+  primaryNavigation,
+} from "@/components/layout/navigation";
 import { cn } from "@/components/ui/cn";
 import { RealtimeProvider, useRealtime } from "@/features/chat/realtime-provider";
 
@@ -14,6 +18,7 @@ export type AppShellUser = {
   username: string;
   avatar?: string | null;
   rank?: string;
+  roles?: readonly string[];
 };
 
 export function AppShell({
@@ -50,12 +55,19 @@ function AppShellContent({
   const messagesWorkspace = pathname === "/messages";
   const messageCount = user ? unreadConversationCount : 0;
   const visibleNotificationCount = user ? notificationCount : 0;
-  const desktopItems = primaryNavigation.map((item) =>
+  const isAdmin = user?.roles?.includes("admin") ?? false;
+  const roleAwareDesktopItems = isAdmin
+    ? [...primaryNavigation, adminNavigationItem]
+    : primaryNavigation;
+  const roleAwareMobileItems = isAdmin
+    ? [...mobileNavigation.slice(0, -1), adminNavigationItem]
+    : mobileNavigation;
+  const desktopItems = roleAwareDesktopItems.map((item) =>
     item.href === "/messages"
       ? { ...item, badge: messageCount || undefined }
       : item,
   );
-  const mobileItems = mobileNavigation.map((item) =>
+  const mobileItems = roleAwareMobileItems.map((item) =>
     item.href === "/messages"
       ? { ...item, badge: messageCount || undefined }
       : item,

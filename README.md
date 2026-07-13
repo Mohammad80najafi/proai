@@ -16,6 +16,7 @@ This repository contains the working MVP foundation. It runs entirely against a 
 - Persian AI prompt analysis and enhancement with six quality dimensions
 - Direct messages with unread counts, typing state, presence, and an HTTP fallback
 - Notifications, profile settings, messaging privacy, and validated avatar uploads
+- Role-protected administration console for users, content moderation, reports, and audited decisions
 - Premium Persian RTL UI using Vazirmatn, Lucide icons, Motion, and Tailwind CSS
 
 ## Technology
@@ -224,7 +225,7 @@ Security-sensitive authorization is performed beside each data mutation, not onl
 - Presence is held in one realtime process; horizontal scaling needs a shared Socket.IO adapter.
 - Uploaded avatars are stored under `public/uploads/avatars`; shared deployments need durable object storage.
 - Registration currently omits email verification, password reset, and multi-factor authentication.
-- Moderation schemas and seeded roles exist, but a complete administration console is outside this MVP.
+- Administration covers the core moderation workflow; bulk actions and configurable policy automation remain outside this MVP.
 - The current automated suite is a foundation and should be expanded with browser-level and transaction integration tests before a public launch.
 
 ## Verification before handoff
