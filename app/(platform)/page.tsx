@@ -13,7 +13,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 
-import { getNewsStories, type NewsStory } from "@/features/news/data";
+import { getNewsStories } from "@/features/news/data";
 
 const topics = [
   { label: "مدل‌های زبانی", count: "۱۲ مطلب", tone: "bg-[#caffdf]" },
@@ -32,78 +32,6 @@ function ReadingMeta({ date, readTime }: { date: string; readTime: string }) {
         {readTime} مطالعه
       </span>
     </p>
-  );
-}
-
-function EditorialPulse({ stories }: { stories: NewsStory[] }) {
-  const pulseStories = stories.slice(0, 3);
-
-  return (
-    <section
-      className="home-reveal home-reveal-delay-1 -mt-14 sm:-mt-20"
-      aria-labelledby="editorial-pulse-title">
-      <div className="surface-noise relative overflow-hidden rounded-[1.75rem] bg-[#0c111b] ring-1 ring-white/[0.07]">
-        <div
-          className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-l from-transparent via-[#8effc1]/70 to-transparent"
-          aria-hidden="true"
-        />
-        <div className="grid lg:grid-cols-[minmax(190px,.62fr)_repeat(3,minmax(0,1fr))]">
-          <header className="flex items-center justify-between gap-5 border-b border-white/[0.07] px-5 py-5 lg:block lg:border-e lg:border-b-0 lg:p-6">
-            <div>
-              <div className="flex items-center gap-2 text-[#8effc1]">
-                <span className="grid size-8 place-items-center rounded-full bg-[#8effc1]/10 ring-1 ring-[#8effc1]/20">
-                  <Radio
-                    className="size-3.5"
-                    strokeWidth={1.6}
-                    aria-hidden="true"
-                  />
-                </span>
-                <p id="editorial-pulse-title" className="text-xs font-bold">
-                  نبض تحریریه
-                </p>
-              </div>
-              <p className="mt-3 hidden max-w-36 text-[10px] leading-5 text-faint lg:block">
-                سه خبر مهم برای شروع امروز
-              </p>
-            </div>
-            <span
-              className="text-[9px] font-semibold tracking-[0.16em] text-faint lg:mt-8 lg:block"
-              dir="ltr">
-              QUICK READ
-            </span>
-          </header>
-
-          {pulseStories.map((story, index) => (
-            <Link
-              key={story.slug}
-              href={`/news/${story.slug}`}
-              className={`group relative min-w-0 px-5 py-5 transition-colors duration-500 hover:bg-white/[0.035] lg:px-6 lg:py-6 ${
-                index < pulseStories.length - 1
-                  ? "border-b border-white/[0.07] lg:border-e lg:border-b-0"
-                  : ""
-              }`}>
-              <div className="flex items-center justify-between gap-3 text-[10px]">
-                <span className={`font-bold ${story.accentText}`}>
-                  {story.source}
-                </span>
-                <span className="text-faint">{story.date}</span>
-              </div>
-              <h2 className="pretty-text mt-3 line-clamp-2 text-sm font-bold leading-7 text-slate-200 transition-colors duration-500 group-hover:text-white">
-                {story.title}
-              </h2>
-              <span className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-semibold text-faint transition-colors duration-500 group-hover:text-slate-300">
-                مطالعه خبر
-                <ArrowLeft
-                  className="size-3 transition-transform duration-500 group-hover:-translate-x-1"
-                  strokeWidth={1.5}
-                  aria-hidden="true"
-                />
-              </span>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -131,8 +59,6 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-20 overflow-hidden pb-10 sm:space-y-28">
-      <EditorialPulse stories={homeNewsItems} />
-
       <section
         className="home-reveal home-reveal-delay-1 grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,.55fr)]"
         aria-label="داستان‌های اصلی">
