@@ -86,11 +86,6 @@ const PromptSchema = new Schema(
         message: "A prompt can have at most 12 tags",
       },
     },
-    license: {
-      type: String,
-      enum: ["unspecified", "cc-by-4.0", "cc-by-sa-4.0", "mit", "proprietary"],
-      default: "unspecified",
-    },
     forkedFrom: {
       promptId: optionalObjectId("Prompt"),
       versionId: optionalObjectId("PromptVersion"),

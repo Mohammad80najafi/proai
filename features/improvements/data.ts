@@ -54,6 +54,14 @@ function safeUser(user?: PublicUser) {
   return user ? { username: user.username, displayName: user.displayName, avatar: user.avatar ?? null } : { username: "deleted-user", displayName: "کاربر حذف‌شده", avatar: null };
 }
 
+function promptSnapshotWithoutLicense(snapshot: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(snapshot).filter(([key]) => key !== "license"));
+}
+
+function visibleChangedPaths(targetType: "Prompt" | "Skill", paths: string[]) {
+  return targetType === "Prompt" ? paths.filter((path) => path !== "license") : paths;
+}
+
 export async function listImprovements(user: AuthenticatedUserDTO): Promise<ImprovementListItem[]> {
   await connectToDatabase();
   const filter = user.roles.includes("admin") ? {} : { $or: [{ ownerId: user.id }, { proposerId: user.id }] };
@@ -70,7 +78,7 @@ export async function listImprovements(user: AuthenticatedUserDTO): Promise<Impr
     id: String(item._id), title: item.title, summary: item.summary, status: item.status, targetType: item.targetType,
     targetTitle: titleMap.get(String(item.targetId)) ?? "محتوای حذف‌شده",
     proposer: safeUser(userMap.get(String(item.proposerId))), owner: safeUser(userMap.get(String(item.ownerId))),
-    hasBaseConflict: item.hasBaseConflict, changedPaths: item.changedPaths, lastActivityAt: item.lastActivityAt.toISOString(),
+    hasBaseConflict: item.hasBaseConflict, changedPaths: visibleChangedPaths(item.targetType, item.changedPaths), lastActivityAt: item.lastActivityAt.toISOString(),
   }));
 }
 
@@ -97,19 +105,18 @@ export async function getImprovementDetail(requestId: string, user: Authenticate
     id: String(request._id), title: request.title, summary: request.summary, status: request.status, targetType: request.targetType,
     targetTitle: target ? ("title" in target ? target.title : target.name) : "محتوای حذف‌شده",
     proposer: safeUser(userMap.get(String(request.proposerId))), owner: safeUser(userMap.get(String(request.ownerId))),
-    hasBaseConflict: request.hasBaseConflict, changedPaths: request.changedPaths, lastActivityAt: request.lastActivityAt.toISOString(),
+    hasBaseConflict: request.hasBaseConflict, changedPaths: visibleChangedPaths(request.targetType, request.changedPaths), lastActivityAt: request.lastActivityAt.toISOString(),
   };
   return {
     ...listItem,
     targetId: String(request.targetId), targetSlug: target?.slug ?? "", baseVersionId: String(request.baseVersionId),
-    proposedSnapshot: request.proposedSnapshot,
+    proposedSnapshot: request.targetType === "Prompt" ? promptSnapshotWithoutLicense(request.proposedSnapshot) : request.proposedSnapshot,
     baseSnapshot: request.targetType === "Prompt" ? {
       title: baseVersion?.title ?? "",
       description: baseVersion?.description ?? "",
       content: baseVersion?.content ?? "",
       category: baseVersion?.category ?? "other",
       tags: baseVersion?.tags ?? [],
-      license: baseVersion?.license ?? "unspecified",
     } : {
       name: baseVersion?.name ?? "",
       description: baseVersion?.description ?? "",
@@ -142,7 +149,7 @@ export async function getImprovementDraftContext({
   await connectToDatabase();
 
   if (targetType === "Prompt") {
-    const target = await Prompt.findById(targetId).lean<{ creatorId: unknown; currentVersionId?: unknown; title: string; description: string; content: string; category: string; tags: string[]; license: string; visibility: string; moderationStatus: string } | null>();
+    const target = await Prompt.findById(targetId).lean<{ creatorId: unknown; currentVersionId?: unknown; title: string; description: string; content: string; category: string; tags: string[]; visibility: string; moderationStatus: string } | null>();
     if (!target || !target.currentVersionId || String(target.creatorId) === user.id || target.moderationStatus !== "visible" || !["public", "unlisted"].includes(target.visibility)) return null;
     const owner = await User.findById(target.creatorId).select("displayName").lean<{ displayName: string } | null>();
     return {
@@ -150,7 +157,7 @@ export async function getImprovementDraftContext({
       targetTitle: target.title,
       ownerName: owner?.displayName ?? "مالک محتوا",
       baseVersionId: String(target.currentVersionId),
-      initialSnapshot: { title: target.title, description: target.description, content: target.content, category: target.category, tags: target.tags, license: target.license },
+      initialSnapshot: { title: target.title, description: target.description, content: target.content, category: target.category, tags: target.tags },
     };
   }
 

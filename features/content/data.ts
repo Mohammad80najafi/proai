@@ -4,18 +4,27 @@ import { Types } from "mongoose";
 
 import { connectToDatabase } from "@/lib/db";
 import { Comment } from "@/models/Comment";
+import { Follow } from "@/models/Follow";
 import { Like, Rating, Save } from "@/models/Interaction";
 import { Prompt, promptCategories } from "@/models/Prompt";
 import { PromptVersion } from "@/models/PromptVersion";
 import { Skill } from "@/models/Skill";
 import { SkillVersion } from "@/models/SkillVersion";
 import { User } from "@/models/User";
+import {
+  buildPersonalizedExploreUpdate,
+  resolveSavedVersion,
+  type SavedContentVersion,
+} from "@/features/explore/personalization";
 import type {
   CommentDTO,
   ContentCardDTO,
   ContentImage,
   ContentStats,
+  ExploreUpdateDTO,
+  PromptEditDTO,
   PromptDetailDTO,
+  SavedContentDTO,
   SkillDetailDTO,
   UserSummary,
   VersionDTO,
@@ -238,6 +247,157 @@ export async function getExploreContent(params: ExploreParams = {}) {
   };
 }
 
+type RawFollow = { followingId: unknown };
+export async function getPersonalizedExploreContent(
+  viewerId: string,
+  limit = 8,
+): Promise<ExploreUpdateDTO[]> {
+  if (!Types.ObjectId.isValid(viewerId)) return [];
+
+  await connectToDatabase();
+  const [followRows, saveRows] = await Promise.all([
+    Follow.find({ followerId: viewerId })
+      .select("followingId")
+      .lean<RawFollow[]>(),
+    Save.find({ userId: viewerId, targetType: { $in: ["Prompt", "Skill"] } })
+      .select("targetType targetId versionAtSave lastSeenVersion createdAt")
+      .lean<SavedContentVersion[]>(),
+  ]);
+  const followingIds = followRows
+    .map((row) => String(row.followingId ?? ""))
+    .filter(Types.ObjectId.isValid)
+    .map((value) => new Types.ObjectId(value));
+  const followingSet = new Set(followingIds.map(id));
+  const saveMap = new Map(
+    saveRows.map((save) => [`${save.targetType}:${id(save.targetId)}`, save]),
+  );
+  const promptSaveIds = saveRows
+    .filter((save) => save.targetType === "Prompt")
+    .map((save) => String(save.targetId ?? ""))
+    .filter(Types.ObjectId.isValid)
+    .map((value) => new Types.ObjectId(value));
+  const skillSaveIds = saveRows
+    .filter((save) => save.targetType === "Skill")
+    .map((save) => String(save.targetId ?? ""))
+    .filter(Types.ObjectId.isValid)
+    .map((value) => new Types.ObjectId(value));
+  const boundedLimit = Math.min(Math.max(limit, 1), 16);
+
+  if (followingIds.length === 0 && saveRows.length === 0) return [];
+
+  const [prompts, skills] = await Promise.all([
+    Prompt.find({
+      visibility: "public",
+      moderationStatus: "visible",
+      $or: [
+        ...(followingIds.length ? [{ creatorId: { $in: followingIds } }] : []),
+        ...(promptSaveIds.length ? [{ _id: { $in: promptSaveIds } }] : []),
+      ],
+    })
+      .sort({ updatedAt: -1 })
+      .limit(boundedLimit * 2)
+      .lean<RawPrompt[]>(),
+    Skill.find({
+      visibility: "public",
+      moderationStatus: "visible",
+      $or: [
+        ...(followingIds.length ? [{ creatorId: { $in: followingIds } }] : []),
+        ...(skillSaveIds.length ? [{ _id: { $in: skillSaveIds } }] : []),
+      ],
+    })
+      .sort({ updatedAt: -1 })
+      .limit(boundedLimit * 2)
+      .lean<RawSkill[]>(),
+  ]);
+  const users = await userMapFor([
+    ...prompts.map((prompt) => prompt.creatorId),
+    ...skills.map((skill) => skill.creatorId),
+  ]);
+  const updates = [
+    ...prompts.map((prompt) =>
+      buildPersonalizedExploreUpdate(
+        promptCard(prompt, users),
+        followingSet.has(id(prompt.creatorId)),
+        saveMap.get(`Prompt:${id(prompt._id)}`),
+      ),
+    ),
+    ...skills.map((skill) =>
+      buildPersonalizedExploreUpdate(
+        skillCard(skill, users),
+        followingSet.has(id(skill.creatorId)),
+        saveMap.get(`Skill:${id(skill._id)}`),
+      ),
+    ),
+  ].filter((item): item is ExploreUpdateDTO => item !== null);
+
+  return updates
+    .sort((left, right) => {
+      if (left.unread !== right.unread) return left.unread ? -1 : 1;
+      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+    })
+    .slice(0, boundedLimit);
+}
+
+export async function getSavedContent(userId: string): Promise<{
+  prompts: SavedContentDTO[];
+  skills: SavedContentDTO[];
+}> {
+  if (!Types.ObjectId.isValid(userId)) return { prompts: [], skills: [] };
+
+  await connectToDatabase();
+  const saveRows = await Save.find({
+    userId,
+    targetType: { $in: ["Prompt", "Skill"] },
+  })
+    .select("targetType targetId versionAtSave lastSeenVersion createdAt")
+    .sort({ createdAt: -1 })
+    .lean<SavedContentVersion[]>();
+  if (saveRows.length === 0) return { prompts: [], skills: [] };
+
+  const promptIds = saveRows
+    .filter((save) => save.targetType === "Prompt")
+    .map((save) => save.targetId);
+  const skillIds = saveRows
+    .filter((save) => save.targetType === "Skill")
+    .map((save) => save.targetId);
+  const [prompts, skills] = await Promise.all([
+    Prompt.find({
+      _id: { $in: promptIds },
+      visibility: { $in: ["public", "unlisted"] },
+      moderationStatus: "visible",
+    }).lean<RawPrompt[]>(),
+    Skill.find({
+      _id: { $in: skillIds },
+      visibility: { $in: ["public", "unlisted"] },
+      moderationStatus: "visible",
+    }).lean<RawSkill[]>(),
+  ]);
+  const users = await userMapFor([
+    ...prompts.map((prompt) => prompt.creatorId),
+    ...skills.map((skill) => skill.creatorId),
+  ]);
+  const content = new Map<string, ContentCardDTO>([
+    ...prompts.map((prompt) => [`Prompt:${id(prompt._id)}`, promptCard(prompt, users)] as const),
+    ...skills.map((skill) => [`Skill:${id(skill._id)}`, skillCard(skill, users)] as const),
+  ]);
+  const saved = saveRows.flatMap((save): SavedContentDTO[] => {
+    const card = content.get(`${save.targetType}:${id(save.targetId)}`);
+    if (!card) return [];
+    const savedVersion = resolveSavedVersion(card, save);
+    return [{
+      ...card,
+      savedAt: save.createdAt.toISOString(),
+      savedVersion,
+      hasUnreadUpdate: card.version > savedVersion,
+    }];
+  });
+
+  return {
+    prompts: saved.filter((item) => item.kind === "prompt"),
+    skills: saved.filter((item) => item.kind === "skill"),
+  };
+}
+
 async function getViewerState(
   viewerId: string | null,
   targetType: "Prompt" | "Skill",
@@ -318,6 +478,34 @@ export async function getPromptBySlug(slug: string, viewerId: string | null = nu
       versionNumber: source[1].versionNumber,
     } : null,
     viewer,
+  };
+}
+
+export async function getPromptEditData(slug: string, ownerId: string): Promise<PromptEditDTO | null> {
+  if (!Types.ObjectId.isValid(ownerId)) return null;
+  await connectToDatabase();
+  const prompt = await Prompt.findOne({
+    slug,
+    creatorId: ownerId,
+    moderationStatus: "visible",
+  }).lean<RawPrompt | null>();
+  if (!prompt) return null;
+
+  const category = promptCategories.includes(prompt.category as (typeof promptCategories)[number])
+    ? (prompt.category as PromptEditDTO["category"])
+    : "other";
+
+  return {
+    id: id(prompt._id),
+    slug: prompt.slug,
+    title: prompt.title,
+    description: prompt.description,
+    content: prompt.content,
+    images: prompt.images ?? [],
+    category,
+    tags: prompt.tags ?? [],
+    visibility: prompt.visibility,
+    versionLabel: prompt.currentVersionLabel ?? `${prompt.currentVersion}.0.0`,
   };
 }
 

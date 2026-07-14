@@ -66,11 +66,13 @@ export async function sendOtpCode(
   const env = getServerEnv();
 
   if (env.OTP_PROVIDER === "console") {
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !env.OTP_EXPOSE_CODE) {
       throw new Error("Console OTP delivery is disabled in production.");
     }
 
-    console.info(`[auth:otp] ${phoneNumber}: ${code}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.info(`[auth:otp] ${phoneNumber}: ${code}`);
+    }
     return { developmentCode: code };
   }
 
@@ -97,5 +99,5 @@ export async function sendOtpCode(
     throw new Error("The SMS provider did not accept the OTP message.");
   }
 
-  return {};
+  return env.OTP_EXPOSE_CODE ? { developmentCode: code } : {};
 }

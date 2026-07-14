@@ -48,6 +48,9 @@ export async function toggleFollowAction(_state: ContentActionState, formData: F
   } catch (error) { return actionFailure(error); }
   revalidatePath(`/users/${username}`);
   revalidatePath(`/users/${user.username}`);
+  revalidatePath(`/users/${username}/connections`);
+  revalidatePath(`/users/${user.username}/connections`);
+  revalidatePath("/explore");
   return { status: "success", message: active ? "کاربر را دنبال کردید." : "دنبال‌کردن متوقف شد.", data: { active } };
 }
 

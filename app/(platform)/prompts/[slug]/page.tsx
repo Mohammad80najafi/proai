@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Braces, CalendarDays, GitPullRequestArrow, History, MessageSquare, ShieldCheck, Star } from "lucide-react";
+import { ArrowRight, Braces, CalendarDays, GitPullRequestArrow, History, MessageSquare, PencilLine, Star } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Markdown } from "@/components/ui/markdown";
 import { CommentForm } from "@/features/content/comment-form";
@@ -59,7 +60,10 @@ export default async function PromptDetailPage({ params }: Props) {
                 <span><span className="block text-xs font-semibold text-slate-200">{prompt.author.displayName}</span><span className="mt-0.5 block text-[10px] text-faint" dir="ltr">@{prompt.author.username}</span></span>
               </Link>
               <span className="text-[11px] text-faint">به‌روزرسانی {formatRelativeDate(prompt.updatedAt)}</span>
-              <div className="sm:ms-auto"><CopyButton value={prompt.content} /></div>
+              <div className="flex flex-wrap items-center gap-2 sm:ms-auto">
+                {prompt.viewer.isOwner ? <ButtonLink href={`/prompts/${prompt.slug}/edit`} variant="secondary" size="sm"><PencilLine className="size-3.5" aria-hidden />به‌روزرسانی پرامپت</ButtonLink> : null}
+                <CopyButton value={prompt.content} />
+              </div>
             </div>
           </div>
         </div>
@@ -70,7 +74,7 @@ export default async function PromptDetailPage({ params }: Props) {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4"><h2 className="font-semibold">متن پرامپت</h2><span className="text-[10px] text-faint">Markdown</span></div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4"><div><h2 className="font-semibold">متن پرامپت</h2><span className="mt-1 block text-[10px] text-faint">Markdown</span></div><CopyButton value={prompt.content} label="کپی پرامپت" /></div>
             <div className="p-5 sm:p-7"><Markdown>{prompt.content}</Markdown></div>
           </Card>
 
@@ -102,7 +106,7 @@ export default async function PromptDetailPage({ params }: Props) {
             <Link href={`/users/${prompt.author.username}`} className="flex items-center gap-3"><Avatar src={prompt.author.avatar} fallback={prompt.author.displayName} alt={prompt.author.displayName} /><div><p className="text-sm font-semibold">{prompt.author.displayName}</p><p className="mt-1 text-[11px] text-faint" dir="ltr">@{prompt.author.username}</p></div></Link>
             {prompt.contributors.length ? <div className="mt-4 border-t border-white/[0.07] pt-4"><p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-faint">مشارکت‌کنندگان</p><div className="space-y-2">{prompt.contributors.map((contributor) => <Link key={contributor.id} href={`/users/${contributor.username}`} className="flex items-center gap-2 rounded-lg p-1.5 outline-none transition-colors hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-primary/60"><Avatar src={contributor.avatar} fallback={contributor.displayName} alt="" size="xs" /><span className="text-xs font-medium text-slate-300">{contributor.displayName}</span><Badge variant="green" className="ms-auto">Contributor</Badge></Link>)}</div></div> : null}
           </Card>
-          <Card className="space-y-3 p-5 text-xs text-muted"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><Star className="size-4" />امتیاز جامعه</span><strong className="text-white">{prompt.stats.ratingAverage.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><GitPullRequestArrow className="size-4" />بهبودهای پذیرفته‌شده</span><strong className="text-white">{prompt.stats.forks.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><CalendarDays className="size-4" />انتشار</span><strong className="text-white">{formatDate(prompt.createdAt)}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><ShieldCheck className="size-4" />مجوز</span><strong className="text-white">CC BY 4.0</strong></div></Card>
+          <Card className="space-y-3 p-5 text-xs text-muted"><div className="flex items-center justify-between"><span className="flex items-center gap-2"><Star className="size-4" />امتیاز جامعه</span><strong className="text-white">{prompt.stats.ratingAverage.toLocaleString("fa-IR", { maximumFractionDigits: 1 })}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><GitPullRequestArrow className="size-4" />بهبودهای پذیرفته‌شده</span><strong className="text-white">{prompt.stats.forks.toLocaleString("fa-IR")}</strong></div><div className="flex items-center justify-between"><span className="flex items-center gap-2"><CalendarDays className="size-4" />انتشار</span><strong className="text-white">{formatDate(prompt.createdAt)}</strong></div></Card>
         </aside>
       </div>
     </div>

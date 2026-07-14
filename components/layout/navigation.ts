@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Bookmark,
   Compass,
   GitPullRequestArrow,
   Home,
@@ -19,6 +20,7 @@ export interface NavigationItem {
 export const primaryNavigation: NavigationItem[] = [
   { label: "خانه", href: "/", icon: Home, exact: true },
   { label: "کاوش", href: "/explore", icon: Compass },
+  { label: "ذخیره‌ها", href: "/saved", icon: Bookmark },
   {
     label: "پیشنهادهای بهبود",
     href: "/improvements",
@@ -30,6 +32,7 @@ export const primaryNavigation: NavigationItem[] = [
 export const mobileNavigation: NavigationItem[] = [
   { label: "خانه", href: "/", icon: Home, exact: true },
   { label: "کاوش", href: "/explore", icon: Compass },
+  { label: "ذخیره‌ها", href: "/saved", icon: Bookmark },
   { label: "بهبودها", href: "/improvements", icon: GitPullRequestArrow },
   { label: "پیام‌ها", href: "/messages", icon: MessageCircle },
   { label: "پروفایل", href: "/profile", icon: UserRound },

@@ -35,9 +35,6 @@ export function ProposalFields({
             <option value="development">برنامه‌نویسی</option><option value="writing">تولید محتوا</option><option value="design">طراحی</option><option value="business">کسب‌وکار</option><option value="education">آموزش</option><option value="research">تحقیق</option><option value="productivity">بهره‌وری</option><option value="other">سایر</option>
           </Select>
         </div>
-        <Select name="license" label="مجوز پیشنهادی" defaultValue={text(snapshot.license) || "cc-by-4.0"}>
-          <option value="cc-by-4.0">CC BY 4.0</option><option value="cc-by-sa-4.0">CC BY-SA 4.0</option><option value="mit">MIT</option><option value="proprietary">همه حقوق محفوظ</option><option value="unspecified">مشخص‌نشده</option>
-        </Select>
       </div>
     );
   }

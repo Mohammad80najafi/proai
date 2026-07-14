@@ -25,11 +25,6 @@ const PromptVersionSchema = new Schema(
       enum: ["development", "writing", "design", "business", "education", "research", "productivity", "other"],
       default: "other",
     },
-    license: {
-      type: String,
-      enum: ["unspecified", "cc-by-4.0", "cc-by-sa-4.0", "mit", "proprietary"],
-      default: "unspecified",
-    },
     changeSummary: { type: String, required: true, trim: true, maxlength: 2_000 },
     authorId: objectId("User"),
     parentVersionId: optionalObjectId("PromptVersion"),

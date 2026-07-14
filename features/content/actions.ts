@@ -8,12 +8,14 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/dal";
 import { REPUTATION_POINTS } from "@/lib/constants";
 import { connectToDatabase } from "@/lib/db";
+import { nextVersionLabel } from "@/features/improvements/versioning";
 import { Comment } from "@/models/Comment";
 import {
   ImprovementDiscussionMessage,
   ImprovementRequest,
 } from "@/models/ImprovementRequest";
 import { Like, Rating, Save } from "@/models/Interaction";
+import { Notification } from "@/models/Notification";
 import { Prompt } from "@/models/Prompt";
 import { PromptVersion } from "@/models/PromptVersion";
 import { Skill } from "@/models/Skill";
@@ -45,6 +47,7 @@ import {
   type ContentActionState,
 } from "./mutation-helpers";
 import { awardReputation, createNotification } from "./mutation-services";
+import { notifyContentUpdateAudience } from "./update-notifications";
 
 const objectIdSchema = z.string().refine(Types.ObjectId.isValid, "شناسه معتبر نیست.");
 const changeSummarySchema = z
@@ -55,6 +58,8 @@ const changeSummarySchema = z
 const promptVersionSchema = createPromptSchema.extend({
   promptId: objectIdSchema,
   changeSummary: changeSummarySchema,
+  versionBump: z.enum(["patch", "minor", "major", "custom"]),
+  customVersionLabel: z.string().trim().max(32).default(""),
 });
 const skillVersionSchema = createSkillSchema.extend({
   skillId: objectIdSchema,
@@ -67,7 +72,6 @@ type PromptSnapshot = {
   category: z.infer<typeof createPromptSchema>["category"];
   tags: string[];
   visibility: "draft" | "public" | "unlisted";
-  license: z.infer<typeof createPromptSchema>["license"];
   images?: Array<{ url: string; alt: string }>;
 };
 
@@ -100,7 +104,6 @@ function promptSnapshot(input: z.infer<typeof createPromptSchema>): PromptSnapsh
     category: input.category,
     tags: input.tags,
     visibility: input.visibility,
-    license: input.license,
     ...(input.images ? { images: input.images } : {}),
   };
 }
@@ -128,7 +131,6 @@ function versionPromptSnapshot(snapshot: PromptSnapshot) {
     content: snapshot.content,
     tags: snapshot.tags,
     category: snapshot.category,
-    license: snapshot.license,
   };
 }
 
@@ -149,6 +151,7 @@ function versionSkillSnapshot(snapshot: SkillSnapshot) {
 function revalidateContent(targetType: "Prompt" | "Skill", slug?: string) {
   const segment = targetType === "Prompt" ? "prompts" : "skills";
   revalidatePath("/explore");
+  revalidatePath("/saved");
   revalidatePath(`/${segment}`);
   if (slug) revalidatePath(`/${segment}/${slug}`);
 }
@@ -329,6 +332,14 @@ export async function createPromptVersionAction(
       slug = prompt.slug;
       const previousVersion = prompt.currentVersion;
       const nextVersion = previousVersion + 1;
+      const versionLabel = nextVersionLabel(
+        prompt.currentVersionLabel,
+        parsed.data.versionBump,
+        parsed.data.customVersionLabel,
+      );
+      if (!versionLabel) {
+        throw new PublicActionError("برچسب نسخه سفارشی معتبر نیست.");
+      }
       const versionId = new Types.ObjectId();
       const rootUpdate = await Prompt.updateOne(
         { _id: promptId, currentVersion: previousVersion },
@@ -336,6 +347,7 @@ export async function createPromptVersionAction(
           $set: {
             ...snapshot,
             currentVersion: nextVersion,
+            currentVersionLabel: versionLabel,
             currentVersionId: versionId,
             publishedAt: firstPublishedAt(prompt.publishedAt, snapshot.visibility),
           },
@@ -352,6 +364,7 @@ export async function createPromptVersionAction(
             _id: versionId,
             promptId,
             versionNumber: nextVersion,
+            versionLabel,
             ...versionPromptSnapshot(snapshot),
             changeSummary: parsed.data.changeSummary,
             authorId: user.id,
@@ -363,6 +376,19 @@ export async function createPromptVersionAction(
         ],
         { session },
       );
+
+      if (snapshot.visibility !== "draft") {
+        await notifyContentUpdateAudience({
+          targetType: "Prompt",
+          targetId: promptId,
+          creatorId: prompt.creatorId,
+          actorId: user.id,
+          slug: prompt.slug,
+          title: snapshot.title,
+          version: versionLabel,
+          session,
+        });
+      }
 
       if (!prompt.publishedAt && snapshot.visibility !== "draft") {
         await awardReputation({
@@ -383,7 +409,7 @@ export async function createPromptVersionAction(
   }
 
   revalidateContent("Prompt", slug);
-  return { status: "success", message: "نسخه رسمی جدید ساخته شد." };
+  redirect(`/prompts/${slug}`);
 }
 
 export async function createSkillVersionAction(
@@ -443,6 +469,19 @@ export async function createSkillVersionAction(
         ],
         { session },
       );
+
+      if (snapshot.visibility !== "draft") {
+        await notifyContentUpdateAudience({
+          targetType: "Skill",
+          targetId: skillId,
+          creatorId: skill.creatorId,
+          actorId: user.id,
+          slug: skill.slug,
+          title: snapshot.name,
+          version: nextVersion,
+          session,
+        });
+      }
 
       if (!skill.publishedAt && snapshot.visibility !== "draft") {
         await awardReputation({
@@ -601,6 +640,9 @@ export async function toggleSaveAction(
               targetType: parsed.data.targetType,
               targetId,
               folder: "default",
+              versionAtSave: target.currentVersion,
+              lastSeenVersion: target.currentVersion,
+              lastSeenAt: new Date(),
             },
           ],
           { session },
@@ -627,6 +669,53 @@ export async function toggleSaveAction(
     message: active ? "محتوا ذخیره شد." : "از ذخیره‌ها برداشته شد.",
     data: { active, count },
   };
+}
+
+export async function openExploreUpdateAction(
+  targetTypeValue: string,
+  targetIdValue: string,
+): Promise<void> {
+  const user = authIdentity(await requireUser());
+  const parsed = interactionSchema.safeParse({
+    targetType: targetTypeValue,
+    targetId: targetIdValue,
+  });
+  if (!parsed.success) redirect("/explore");
+
+  const targetId = toObjectId(parsed.data.targetId, "شناسه محتوا");
+  let href = "/explore";
+  const database = await connectToDatabase();
+  await database.connection.transaction(async (session) => {
+    const target = await visibleTarget(parsed.data.targetType, targetId, session);
+    if (!target) throw new PublicActionError("محتوا پیدا نشد یا در دسترس نیست.");
+
+    href = `/${parsed.data.targetType === "Prompt" ? "prompts" : "skills"}/${target.slug}`;
+    await Save.updateOne(
+      { userId: user.id, targetType: parsed.data.targetType, targetId },
+      {
+        $set: {
+          lastSeenVersion: target.currentVersion,
+          lastSeenAt: new Date(),
+        },
+      },
+      { session },
+    );
+    await Notification.updateMany(
+      {
+        recipientId: user.id,
+        type: "content-updated",
+        entityModel: parsed.data.targetType,
+        entityId: targetId,
+        readAt: null,
+      },
+      { $set: { readAt: new Date() } },
+      { session },
+    );
+  });
+
+  revalidatePath("/explore");
+  revalidatePath("/notifications");
+  redirect(href);
 }
 
 export async function rateContentAction(
@@ -893,7 +982,6 @@ export async function openImprovementRequestAction(
           content: baseVersion.content,
           tags: [...baseVersion.tags],
           category: baseVersion.category ?? target.category,
-          license: baseVersion.license ?? target.license,
         };
         hasBaseConflict = String(target.currentVersionId ?? "") !== String(baseVersionId);
       } else {

@@ -21,6 +21,18 @@ export type ProfileDTO = {
   contributionEvents: number;
 };
 
+export type ConnectionUserDTO = UserSummary & {
+  bio: string;
+  stats: { followers: number; following: number; prompts: number; skills: number; acceptedImprovements: number };
+  isFollowing: boolean;
+  isSelf: boolean;
+};
+
+export type ConnectionsDTO = {
+  profile: UserSummary & { stats: { followers: number; following: number; prompts: number; skills: number; acceptedImprovements: number } };
+  users: ConnectionUserDTO[];
+};
+
 function summary(user: RawUser): UserSummary { return { id: String(user._id), username: user.username, displayName: user.displayName, avatar: user.avatar ?? null, rank: user.rank, reputationScore: user.reputationScore }; }
 function stats(value?: RawUser["stats"]) { return { followers: value?.followers ?? 0, following: value?.following ?? 0, prompts: value?.prompts ?? 0, skills: value?.skills ?? 0, acceptedImprovements: value?.acceptedImprovements ?? 0 }; }
 function contentStats(value?: Record<string, number>) { return { likes: value?.likes ?? 0, saves: value?.saves ?? 0, comments: value?.comments ?? 0, forks: value?.forks ?? 0, ratingAverage: value?.ratingAverage ?? 0, ratingCount: value?.ratingCount ?? 0 }; }
@@ -51,7 +63,67 @@ export async function getProfile(username: string, viewerId?: string | null): Pr
   };
 }
 
-function notificationType(type: string): NotificationDTO["type"] { if (type === "follow") return "follow"; if (type === "like") return "like"; if (type === "comment") return "comment"; if (type === "mention") return "mention"; if (type === "message") return "message"; if (type === "achievement") return "achievement"; return "improvement"; }
+export async function getUserConnections(
+  username: string,
+  mode: "followers" | "following",
+  viewerId?: string | null,
+): Promise<ConnectionsDTO | null> {
+  await connectToDatabase();
+  const profile = await User.findOne({
+    username: username.toLowerCase(),
+    accountStatus: "active",
+  })
+    .select("username displayName avatar rank reputationScore stats")
+    .lean<RawUser | null>();
+  if (!profile) return null;
+
+  const profileId = String(profile._id);
+  const relations = mode === "followers"
+    ? await Follow.find({ followingId: profileId })
+        .select("followerId createdAt")
+        .sort({ createdAt: -1 })
+        .lean<Array<{ followerId: unknown }>>()
+    : await Follow.find({ followerId: profileId })
+        .select("followingId createdAt")
+        .sort({ createdAt: -1 })
+        .lean<Array<{ followingId: unknown }>>();
+  const userIds = relations.map((relation) =>
+    mode === "followers"
+      ? String((relation as { followerId: unknown }).followerId)
+      : String((relation as { followingId: unknown }).followingId),
+  );
+  const [users, viewerFollows] = await Promise.all([
+    userIds.length
+      ? User.find({ _id: { $in: userIds }, accountStatus: "active" })
+          .select("username displayName avatar bio rank reputationScore stats")
+          .lean<RawUser[]>()
+      : Promise.resolve([]),
+    viewerId && userIds.length
+      ? Follow.find({ followerId: viewerId, followingId: { $in: userIds } })
+          .select("followingId")
+          .lean<Array<{ followingId: unknown }>>()
+      : Promise.resolve([]),
+  ]);
+  const userMap = new Map(users.map((user) => [String(user._id), user]));
+  const viewerFollowingIds = new Set(viewerFollows.map((row) => String(row.followingId)));
+
+  return {
+    profile: { ...summary(profile), stats: stats(profile.stats) },
+    users: userIds.flatMap((userId): ConnectionUserDTO[] => {
+      const user = userMap.get(userId);
+      if (!user) return [];
+      return [{
+        ...summary(user),
+        bio: user.bio ?? "",
+        stats: stats(user.stats),
+        isFollowing: viewerFollowingIds.has(userId),
+        isSelf: viewerId === userId,
+      }];
+    }),
+  };
+}
+
+function notificationType(type: string): NotificationDTO["type"] { if (type === "follow") return "follow"; if (type === "like") return "like"; if (type === "comment") return "comment"; if (type === "mention") return "mention"; if (type === "content-updated") return "update"; if (type === "message") return "message"; if (type === "achievement") return "achievement"; return "improvement"; }
 
 export async function getNotifications(userId: string): Promise<NotificationDTO[]> {
   await connectToDatabase();

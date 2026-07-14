@@ -8,9 +8,15 @@ import type { ContentImage } from "@/features/shared/types";
 
 const MAX_IMAGES = 8;
 
-export function ContentImageUploader({ name = "images" }: { name?: string }) {
+export function ContentImageUploader({
+  name = "images",
+  initialImages = [],
+}: {
+  name?: string;
+  initialImages?: ContentImage[];
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<ContentImage[]>([]);
+  const [images, setImages] = useState<ContentImage[]>(() => [...initialImages]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
 

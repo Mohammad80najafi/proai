@@ -24,6 +24,27 @@ export type ContentImage = {
   alt: string;
 };
 
+export type PromptEditDTO = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  content: string;
+  images: ContentImage[];
+  category:
+    | "development"
+    | "writing"
+    | "design"
+    | "business"
+    | "education"
+    | "research"
+    | "productivity"
+    | "other";
+  tags: string[];
+  visibility: Visibility;
+  versionLabel: string;
+};
+
 export type ContentCardDTO = {
   id: string;
   kind: ContentKind;
@@ -39,6 +60,18 @@ export type ContentCardDTO = {
   updatedAt: string;
   images: ContentImage[];
   isFeatured?: boolean;
+};
+
+export type ExploreUpdateDTO = ContentCardDTO & {
+  reason: "following" | "saved-update" | "following-and-saved-update";
+  unread: boolean;
+  previousVersion: number | null;
+};
+
+export type SavedContentDTO = ContentCardDTO & {
+  savedAt: string;
+  savedVersion: number;
+  hasUnreadUpdate: boolean;
 };
 
 export type VersionDTO = {
@@ -139,7 +172,7 @@ export type ImprovementRequestDTO = {
 
 export type NotificationDTO = {
   id: string;
-  type: "follow" | "like" | "comment" | "mention" | "improvement" | "message" | "achievement";
+  type: "follow" | "like" | "comment" | "mention" | "improvement" | "update" | "message" | "achievement";
   actor: UserSummary | null;
   title: string;
   description: string;

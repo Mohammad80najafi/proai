@@ -54,7 +54,6 @@ export const createPromptSchema = z.object({
   ]),
   tags: z.preprocess(splitList, z.array(z.string().min(1).max(32)).max(12)),
   visibility: visibilitySchema.default("public"),
-  license: licenseSchema.default("cc-by-4.0"),
 });
 
 export const createSkillSchema = z.object({

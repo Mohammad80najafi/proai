@@ -160,7 +160,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
 
           {state.developmentCode ? (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.08] px-3.5 py-3 text-xs text-amber-100">
-              <span>کد محیط توسعه</span>
+              <span>کد ورود آزمایشی</span>
               <strong
                 dir="ltr"
                 className="font-mono text-base tracking-[0.18em]">

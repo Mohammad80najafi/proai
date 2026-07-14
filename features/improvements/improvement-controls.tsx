@@ -26,11 +26,11 @@ export function ImprovementDecisionPanel({ requestId, status, versionBump = "min
       <input type="hidden" name="requestId" value={requestId} />
       <Textarea name="reason" label="یادداشت تصمیم" placeholder="دلیل پذیرش، رد یا تغییرات مورد نیاز را روشن بنویسید…" rows={4} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Select name="versionBump" label="نسخه هنگام پذیرش" defaultValue={versionBump}>
+        <Select name="versionBump" label="نوع نسخه هنگام پذیرش" defaultValue={versionBump} hint="مالک پرامپت هنگام پذیرش، سطح نسخه رسمی بعدی را تعیین می‌کند.">
           <option value="patch">Patch · اصلاح کوچک</option>
           <option value="minor">Minor · قابلیت تازه</option>
           <option value="major">Major · تغییر ناسازگار</option>
-          <option value="custom">برچسب سفارشی</option>
+          <option value="custom">سایر · برچسب سفارشی</option>
         </Select>
         <Input name="customVersionLabel" label="برچسب سفارشی" defaultValue={customVersionLabel} placeholder="مثلاً 2.0-beta" dir="ltr" hint="فقط برای حالت سفارشی" />
       </div>

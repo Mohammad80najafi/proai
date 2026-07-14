@@ -115,7 +115,6 @@ describe("openImprovementRequestAction", () => {
         _id: targetId,
         title: "Source prompt",
         category: "development",
-        license: "cc-by-4.0",
         creatorId: ownerId,
         currentVersionId: baseVersionId,
       }),
@@ -129,7 +128,6 @@ describe("openImprovementRequestAction", () => {
         content: "Original prompt body",
         category: "development",
         tags: ["test"],
-        license: "cc-by-4.0",
       }),
     });
 
@@ -144,7 +142,6 @@ describe("openImprovementRequestAction", () => {
     formData.set("content", "Original prompt body with a clearer output format");
     formData.set("category", "development");
     formData.set("tags", "test");
-    formData.set("license", "cc-by-4.0");
 
     await openImprovementRequestAction({ status: "idle" }, formData);
 

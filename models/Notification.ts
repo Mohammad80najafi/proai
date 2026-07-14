@@ -18,6 +18,7 @@ export const notificationTypes = [
   "improvement-changes-requested",
   "improvement-accepted",
   "improvement-rejected",
+  "content-updated",
   "message",
   "achievement",
   "system",
@@ -72,4 +73,3 @@ export type NotificationDocument = InferSchemaType<typeof NotificationSchema>;
 export const Notification =
   (models.Notification as Model<NotificationDocument> | undefined) ??
   model<NotificationDocument>("Notification", NotificationSchema);
-

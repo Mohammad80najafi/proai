@@ -52,9 +52,6 @@ export function CreatePromptForm() {
             <Select name="visibility" label="دسترسی" defaultValue="public">
               <option value="public">عمومی</option><option value="unlisted">فقط با پیوند</option><option value="draft">پیش‌نویس</option>
             </Select>
-            <Select name="license" label="مجوز استفاده" defaultValue="cc-by-4.0">
-              <option value="cc-by-4.0">CC BY 4.0</option><option value="cc-by-sa-4.0">CC BY-SA 4.0</option><option value="mit">MIT</option><option value="proprietary">همه حقوق محفوظ</option><option value="unspecified">مشخص‌نشده</option>
-            </Select>
             <div className="rounded-2xl bg-primary-soft p-4 text-[11px] leading-6 text-muted"><div className="mb-2 flex items-center gap-2 font-semibold text-primary-strong"><CheckCircle2 className="size-4" strokeWidth={1.5} />نسخه‌پذیر از ابتدا</div>انتشار، نسخه رسمی ۱ را می‌سازد و تاریخچه تغییرات را حفظ می‌کند.</div>
             {state.status === "error" ? <p role="alert" className="rounded-xl bg-danger/10 p-3 text-xs leading-6 text-danger">{state.message}</p> : null}
             <Button type="submit" size="lg" fullWidth disabled={pending}>

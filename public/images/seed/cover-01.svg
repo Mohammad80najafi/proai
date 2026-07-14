@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-label="شبکه معماری هوش مصنوعی">
+  <defs><linearGradient id="b" x2="1" y2="1"><stop stop-color="#111a36"/><stop offset="1" stop-color="#070b14"/></linearGradient><radialGradient id="g"><stop stop-color="#818cf8" stop-opacity=".55"/><stop offset="1" stop-color="#818cf8" stop-opacity="0"/></radialGradient></defs>
+  <rect width="1200" height="675" fill="url(#b)"/><circle cx="180" cy="90" r="350" fill="url(#g)"/><g stroke="#a5b4fc" stroke-opacity=".3" stroke-width="2"><path d="M170 430 420 210 640 390 900 170 1040 420"/><path d="M170 430 640 390 1040 420M420 210 900 170"/></g><g fill="#c7d2fe"><circle cx="170" cy="430" r="12"/><circle cx="420" cy="210" r="16"/><circle cx="640" cy="390" r="20"/><circle cx="900" cy="170" r="14"/><circle cx="1040" cy="420" r="11"/></g><rect x="390" y="505" width="420" height="5" rx="3" fill="#6366f1" opacity=".65"/>
+</svg>

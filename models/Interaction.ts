@@ -63,6 +63,9 @@ const SaveSchema = new Schema(
       refPath: "targetType",
     },
     folder: { type: String, trim: true, maxlength: 80, default: "default" },
+    versionAtSave: { type: Number, min: 1, default: 1 },
+    lastSeenVersion: { type: Number, min: 1, default: 1 },
+    lastSeenAt: { type: Date, default: Date.now },
   },
   timestampOptions,
 );

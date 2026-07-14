@@ -6,6 +6,7 @@ import {
   GitPullRequestArrow,
   Heart,
   MessageCircle,
+  RefreshCw,
   UserPlus,
   X,
 } from "lucide-react";
@@ -19,6 +20,7 @@ export type NotificationType =
   | "comment"
   | "mention"
   | "proposal"
+  | "update"
   | "message"
   | "accepted"
   | "rejected";
@@ -39,6 +41,11 @@ const notificationStyles: Record<
     icon: GitPullRequestArrow,
     color: "bg-orange-400/10 text-orange-300",
     label: "پیشنهاد بهبود",
+  },
+  update: {
+    icon: RefreshCw,
+    color: "bg-cyan-400/10 text-cyan-300",
+    label: "نسخه تازه",
   },
   message: {
     icon: MessageCircle,

@@ -1,13 +1,14 @@
 import { Braces, Shapes } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/page-header";
 import { Card } from "@/components/ui/card";
 import { PromptCard } from "@/components/ui/prompt-card";
 import { SearchBox } from "@/components/ui/search-box";
 import { Select } from "@/components/ui/form-controls";
 import { SkillCard } from "@/components/ui/skill-card";
 import { Tabs } from "@/components/ui/tabs";
-import { getExploreContent } from "@/features/content/data";
+import { getExploreContent, getPersonalizedExploreContent } from "@/features/content/data";
+import { PersonalizedUpdates } from "@/features/explore/personalized-updates";
+import { getOptionalUser } from "@/lib/auth/dal";
 
 type ExploreSearchParams = Promise<{
   q?: string;
@@ -23,30 +24,41 @@ export default async function ExplorePage({
 }: {
   searchParams: ExploreSearchParams;
 }) {
-  const params = await searchParams;
+  const [params, user] = await Promise.all([
+    searchParams,
+    getOptionalUser().catch(() => null),
+  ]);
   const activeType = ["all", "prompts", "skills"].includes(params.type ?? "")
     ? (params.type ?? "all")
     : "all";
   let content = { prompts: [], skills: [] } as Awaited<
     ReturnType<typeof getExploreContent>
   >;
+  let personalized = [] as Awaited<ReturnType<typeof getPersonalizedExploreContent>>;
   let connected = true;
-  try {
-    content = await getExploreContent({
+  const [contentResult, personalizedResult] = await Promise.allSettled([
+    getExploreContent({
       query: params.q,
       category: params.category,
       sort:
         params.sort === "popular" || params.sort === "rating"
           ? params.sort
           : "newest",
-      limit: 24,
-    });
-  } catch {
+      limit: 48,
+    }),
+    user ? getPersonalizedExploreContent(user.id) : Promise.resolve([]),
+  ]);
+  if (contentResult.status === "fulfilled") {
+    content = contentResult.value;
+  } else {
     connected = false;
   }
+  if (personalizedResult.status === "fulfilled") personalized = personalizedResult.value;
 
   return (
     <div className="space-y-7">
+      <PersonalizedUpdates items={personalized} />
+
       <Card className="p-4 sm:p-5">
         <SearchBox defaultValue={params.q} className="mb-4" shortcut="↵" />
         <form

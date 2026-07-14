@@ -18,6 +18,7 @@ import { actionFailure, authIdentity, canManage, changedSnapshotPaths, contentHa
 import { awardReputation, createNotification } from "@/features/content/mutation-services";
 import { createPromptSchema, createSkillSchema, improvementDecisionSchema } from "@/features/content/validation";
 import { nextVersionLabel } from "@/features/improvements/versioning";
+import { notifyContentUpdateAudience } from "@/features/content/update-notifications";
 
 const promptProposalSchema = z.object({
   title: z.string().min(3).max(140),
@@ -25,7 +26,6 @@ const promptProposalSchema = z.object({
   content: z.string().min(10).max(100_000),
   tags: z.array(z.string().max(32)).max(12),
   category: z.enum(["development", "writing", "design", "business", "education", "research", "productivity", "other"]),
-  license: z.enum(["unspecified", "cc-by-4.0", "cc-by-sa-4.0", "mit", "proprietary"]).default("unspecified"),
 });
 
 const skillProposalSchema = z.object({
@@ -50,7 +50,6 @@ function proposalFromValues(targetType: "Prompt" | "Skill", values: Record<strin
       content: parsed.data.content,
       tags: parsed.data.tags,
       category: parsed.data.category,
-      license: parsed.data.license,
     } };
   }
   const parsed = createSkillSchema.safeParse(values);
@@ -133,6 +132,9 @@ export async function decideImprovementAction(
 
       const nextVersionId = new Types.ObjectId();
       let targetSlug = "";
+      let targetCreatorId: unknown = null;
+      let targetTitle = "";
+      let acceptedVersionLabel = "";
       if (request.targetType === "Prompt") {
         const target = await Prompt.findById(request.targetId).session(session);
         if (!target) throw new PublicActionError("پرامپت اصلی پیدا نشد.");
@@ -146,7 +148,6 @@ export async function decideImprovementAction(
         const snapshot = promptProposalSchema.parse({
           ...request.proposedSnapshot,
           category: request.proposedSnapshot?.category ?? target.category,
-          license: request.proposedSnapshot?.license ?? target.license,
         });
         const nextVersion = target.currentVersion + 1;
         const versionLabel = nextVersionLabel(target.currentVersionLabel, versionBump, customVersionLabel);
@@ -181,6 +182,9 @@ export async function decideImprovementAction(
           isOfficial: true,
         }], { session });
         targetSlug = target.slug;
+        targetCreatorId = target.creatorId;
+        targetTitle = snapshot.title;
+        acceptedVersionLabel = versionLabel;
       } else {
         const target = await Skill.findById(request.targetId).session(session);
         if (!target) throw new PublicActionError("مهارت اصلی پیدا نشد.");
@@ -228,7 +232,21 @@ export async function decideImprovementAction(
           isOfficial: true,
         }], { session });
         targetSlug = target.slug;
+        targetCreatorId = target.creatorId;
+        targetTitle = snapshot.name;
+        acceptedVersionLabel = versionLabel;
       }
+
+      await notifyContentUpdateAudience({
+        targetType: request.targetType,
+        targetId: request.targetId,
+        creatorId: targetCreatorId,
+        actorId: user.id,
+        slug: targetSlug,
+        title: targetTitle,
+        version: acceptedVersionLabel,
+        session,
+      });
 
       request.status = "accepted";
       request.acceptedVersionModel = request.targetType === "Prompt" ? "PromptVersion" : "SkillVersion";
