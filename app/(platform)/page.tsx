@@ -319,7 +319,7 @@ export default async function HomePage() {
               </p>
               <Link
                 href="/register"
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#081a12] px-5 py-2.5 text-xs font-semibold text-white">
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#081a12] px-5 py-2.5 text-xs font-semibold text-white!">
                 عضویت رایگان
                 <ArrowLeft
                   className="size-3.5"

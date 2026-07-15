@@ -42,7 +42,7 @@ export function Tabs({
             aria-disabled={item.disabled || undefined}
             tabIndex={item.disabled ? -1 : undefined}
             className={cn(
-              "inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-indigo-400/70 motion-reduce:transition-none",
+              "inline-flex h-9 shrink-0 items-center gap-1 rounded-lg px-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-indigo-400/70 motion-reduce:transition-none sm:gap-2 sm:px-3",
               active
                 ? "bg-white/[0.09] text-white shadow-sm"
                 : "text-slate-500 hover:bg-white/[0.045] hover:text-slate-200",
@@ -58,7 +58,7 @@ export function Tabs({
             {typeof item.count === "number" ? (
               <span
                 className={cn(
-                  "rounded-md px-1.5 py-0.5 text-[10px] tabular-nums",
+                  "hidden rounded-md px-1.5 py-0.5 text-[10px] tabular-nums sm:inline",
                   active ? "bg-white/10 text-slate-200" : "bg-white/[0.05] text-slate-500",
                 )}
               >

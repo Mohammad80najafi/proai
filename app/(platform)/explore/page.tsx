@@ -1,4 +1,5 @@
-import { Braces, Shapes } from "lucide-react";
+import Link from "next/link";
+import { BookmarkCheck, Braces, Shapes, UserCheck } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { PromptCard } from "@/components/ui/prompt-card";
@@ -28,7 +29,7 @@ export default async function ExplorePage({
     searchParams,
     getOptionalUser().catch(() => null),
   ]);
-  const activeType = ["all", "prompts", "skills"].includes(params.type ?? "")
+  const activeType = ["all", "prompts", "skills", "following"].includes(params.type ?? "")
     ? (params.type ?? "all")
     : "all";
   let content = { prompts: [], skills: [] } as Awaited<
@@ -36,6 +37,7 @@ export default async function ExplorePage({
   >;
   let personalized = [] as Awaited<ReturnType<typeof getPersonalizedExploreContent>>;
   let connected = true;
+  let personalizedConnected = true;
   const [contentResult, personalizedResult] = await Promise.allSettled([
     getExploreContent({
       query: params.q,
@@ -54,11 +56,10 @@ export default async function ExplorePage({
     connected = false;
   }
   if (personalizedResult.status === "fulfilled") personalized = personalizedResult.value;
+  else personalizedConnected = false;
 
   return (
     <div className="space-y-7">
-      <PersonalizedUpdates items={personalized} />
-
       <Card className="p-4 sm:p-5">
         <SearchBox defaultValue={params.q} className="mb-4" shortcut="↵" />
         <form
@@ -118,6 +119,13 @@ export default async function ExplorePage({
             icon: <Shapes />,
             count: content.skills.length,
           },
+          {
+            key: "following",
+            label: "دنبال‌شده‌ها",
+            href: "/explore?type=following",
+            icon: <UserCheck />,
+            count: personalized.length,
+          },
         ]}
       />
 
@@ -125,6 +133,50 @@ export default async function ExplorePage({
         <Card className="p-8 text-center text-sm leading-7 text-muted">
           اتصال به MongoDB برقرار نیست. پس از اجرای پایگاه داده، محتوای جامعه
           اینجا نمایش داده می‌شود.
+        </Card>
+      ) : null}
+
+      {activeType === "following" && user && personalizedConnected && personalized.length ? (
+        <PersonalizedUpdates items={personalized} />
+      ) : null}
+
+      {activeType === "following" && !user ? (
+        <Card className="grid min-h-64 place-items-center p-8 text-center">
+          <div className="max-w-md">
+            <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-cyan-300/[0.08] text-cyan-200 ring-1 ring-cyan-200/15">
+              <UserCheck className="size-5" aria-hidden="true" />
+            </span>
+            <h2 className="mt-4 font-bold">تازه‌های مخصوص شما پس از ورود</h2>
+            <p className="mt-2 text-sm leading-7 text-muted">
+              وارد شوید تا نسخه‌های تازه سازنده‌هایی که دنبال می‌کنید و محتوای ذخیره‌شده‌تان را اینجا ببینید.
+            </p>
+            <Link href="/login?next=%2Fexplore%3Ftype%3Dfollowing" className="mt-5 inline-flex h-10 items-center justify-center rounded-xl bg-cyan-300 px-5 text-sm font-bold text-slate-950 outline-none transition hover:bg-cyan-200 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-[#080c15]">
+              ورود به حساب
+            </Link>
+          </div>
+        </Card>
+      ) : null}
+
+      {activeType === "following" && user && personalizedConnected && personalized.length === 0 ? (
+        <Card className="grid min-h-64 place-items-center p-8 text-center">
+          <div className="max-w-md">
+            <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-cyan-300/[0.08] text-cyan-200 ring-1 ring-cyan-200/15">
+              <BookmarkCheck className="size-5" aria-hidden="true" />
+            </span>
+            <h2 className="mt-4 font-bold">هنوز تازه‌ای برای شما نیست</h2>
+            <p className="mt-2 text-sm leading-7 text-muted">
+              چند سازنده را دنبال یا پرامپت و مهارتی را ذخیره کنید؛ نسخه‌های تازه بعدی در این تب ظاهر می‌شوند.
+            </p>
+            <Link href="/explore" className="mt-5 inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] px-5 text-sm font-semibold text-slate-200 outline-none transition hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-indigo-400/70">
+              پیدا کردن محتوا
+            </Link>
+          </div>
+        </Card>
+      ) : null}
+
+      {activeType === "following" && !personalizedConnected ? (
+        <Card className="p-8 text-center text-sm leading-7 text-muted">
+          تازه‌های دنبال‌شده‌ها در حال حاضر در دسترس نیست. چند لحظه دیگر دوباره تلاش کنید.
         </Card>
       ) : null}
 
