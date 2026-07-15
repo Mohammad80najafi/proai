@@ -10,6 +10,71 @@ import type { ChatConversation, ChatMessage, ChatUser } from "@/features/chat/ty
 type RawUser = { _id: unknown; username: string; displayName: string; avatar?: string | null };
 const userDTO = (user: RawUser): ChatUser => ({ id: String(user._id), username: user.username, displayName: user.displayName, avatar: user.avatar ?? null });
 
+export type MessageUserSuggestion = ChatUser & {
+  bio: string;
+  reputationScore: number;
+  followers: number;
+};
+
+type RawMessageUser = RawUser & {
+  bio?: string;
+  reputationScore?: number;
+  stats?: { followers?: number };
+};
+
+function escapeSearchPattern(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export async function getMessageUserSuggestions(
+  currentUserId: string,
+  search?: string,
+  limit = 10,
+): Promise<MessageUserSuggestion[]> {
+  await connectToDatabase();
+  const term = search?.trim().replace(/^@+/, "").slice(0, 60) ?? "";
+  const expression = term ? new RegExp(escapeSearchPattern(term), "i") : null;
+  const rows = await User.find({
+    accountStatus: "active",
+    _id: { $ne: currentUserId },
+    ...(expression
+      ? { $or: [{ username: expression }, { displayName: expression }] }
+      : {}),
+  })
+    .select("username displayName avatar bio reputationScore stats.followers")
+    .sort({ reputationScore: -1, createdAt: 1 })
+    .limit(expression ? Math.min(limit * 2, 30) : limit)
+    .lean<RawMessageUser[]>();
+
+  const normalizedTerm = term.toLocaleLowerCase("fa-IR");
+  if (normalizedTerm) {
+    rows.sort((left, right) => {
+      const leftUsername = left.username.toLocaleLowerCase("fa-IR");
+      const rightUsername = right.username.toLocaleLowerCase("fa-IR");
+      const leftName = left.displayName.toLocaleLowerCase("fa-IR");
+      const rightName = right.displayName.toLocaleLowerCase("fa-IR");
+      const leftPriority = leftUsername === normalizedTerm || leftName === normalizedTerm
+        ? 0
+        : leftUsername.startsWith(normalizedTerm) || leftName.startsWith(normalizedTerm)
+          ? 1
+          : 2;
+      const rightPriority = rightUsername === normalizedTerm || rightName === normalizedTerm
+        ? 0
+        : rightUsername.startsWith(normalizedTerm) || rightName.startsWith(normalizedTerm)
+          ? 1
+          : 2;
+      return leftPriority - rightPriority || (right.reputationScore ?? 0) - (left.reputationScore ?? 0);
+    });
+  }
+
+  return rows.slice(0, limit).map((user) => ({
+    ...userDTO(user),
+    bio: user.bio ?? "",
+    reputationScore: user.reputationScore ?? 0,
+    followers: user.stats?.followers ?? 0,
+  }));
+}
+
 export async function getConversationList(userId: string): Promise<ChatConversation[]> {
   await connectToDatabase();
   const memberships = await ConversationMember.find({ userId, leftAt: null, archivedAt: null }).sort({ updatedAt: -1 }).lean<Array<{ conversationId: unknown; unreadCount: number }>>();
