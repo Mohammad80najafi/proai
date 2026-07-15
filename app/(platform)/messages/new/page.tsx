@@ -3,10 +3,10 @@ import { Search, SearchX, Sparkles, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NewConversationForm } from "@/features/chat/new-conversation-form";
 import { getMessageUserSuggestions } from "@/features/chat/data";
+import { MessageUserSearch } from "@/features/chat/message-user-search";
 import { requireUser } from "@/lib/auth/dal";
 import { formatNumber } from "@/lib/format";
 
@@ -41,31 +41,7 @@ export default async function NewMessagePage({
           className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-l from-transparent via-cyan-200/45 to-transparent"
           aria-hidden="true"
         />
-        <form action="/messages/new" method="get" className="flex flex-col gap-2 sm:flex-row">
-          <label htmlFor="message-user-search" className="sr-only">
-            جست‌وجوی نام یا نام کاربری
-          </label>
-          <div className="relative min-w-0 flex-1">
-            <Search
-              className="pointer-events-none absolute inset-y-0 start-3.5 my-auto size-4 text-faint"
-              aria-hidden="true"
-            />
-            <input
-              id="message-user-search"
-              name="q"
-              type="search"
-              defaultValue={searchTerm}
-              placeholder="نام یا نام کاربری؛ مثلاً تیم پروای‌آی"
-              dir="auto"
-              autoComplete="off"
-              className="h-12 w-full rounded-xl border border-white/[0.09] bg-[#090e18] ps-10 pe-3 text-base text-slate-100 outline-none transition-colors placeholder:text-faint hover:border-white/[0.14] focus:border-cyan-300/45 focus:ring-4 focus:ring-cyan-300/[0.07] sm:text-sm"
-            />
-          </div>
-          <Button type="submit" className="h-12 px-6">
-            <Search className="size-4" aria-hidden="true" />
-            جست‌وجو
-          </Button>
-        </form>
+        <MessageUserSearch initialValue={searchTerm} />
       </Card>
 
       <section aria-labelledby="message-user-results">
