@@ -69,10 +69,10 @@ export default async function PromptDetailPage({ params }: Props) {
         </div>
       </section>
 
-      <ContentImageGallery images={prompt.images} title={prompt.title} />
-
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div className="space-y-6">
+          <ContentImageGallery images={prompt.images} title={prompt.title} />
+
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4"><div><h2 className="font-semibold">متن پرامپت</h2><span className="mt-1 block text-[10px] text-faint">Markdown</span></div><CopyButton value={prompt.content} label="کپی پرامپت" /></div>
             <div className="p-5 sm:p-7"><Markdown>{prompt.content}</Markdown></div>
