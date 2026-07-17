@@ -48,14 +48,17 @@ export default async function AuthLayout({
             یک شماره، یک کد، و مسیر شما در ProAI ادامه پیدا می‌کند.
           </h2>
           <p className="pretty-text mt-5 max-w-md text-sm leading-8 text-slate-400">
-            برای ساخت و بهبود پرامپت‌ها، اشتراک مهارت‌ها و گفت‌وگو با سازندگان وارد شوید.
+            برای ساخت و بهبود پرامپت‌ها، اشتراک مهارت‌ها و گفت‌وگو با سازندگان
+            وارد شوید.
           </p>
 
           <div className="mt-9 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025]">
             {trustPoints.map((point) => {
               const Icon = point.icon;
               return (
-                <div key={point.title} className="flex gap-4 border-b border-white/[0.06] p-4 last:border-b-0">
+                <div
+                  key={point.title}
+                  className="flex gap-4 border-b border-white/[0.06] p-4 last:border-b-0">
                   <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-indigo-400/[0.09] text-indigo-300">
                     <Icon className="size-4" aria-hidden="true" />
                   </span>
@@ -74,7 +77,10 @@ export default async function AuthLayout({
         </div>
 
         <div className="relative flex items-center gap-2 text-[11px] text-slate-600">
-          <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+          <span
+            className="size-1.5 rounded-full bg-emerald-400"
+            aria-hidden="true"
+          />
           دسترسی امن برای جامعه فارسی‌زبان هوش مصنوعی
         </div>
       </aside>

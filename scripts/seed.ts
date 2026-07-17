@@ -32,7 +32,7 @@ import { Session } from "../models/Session";
 import { Skill } from "../models/Skill";
 import { SkillVersion } from "../models/SkillVersion";
 import { User } from "../models/User";
-import { DEFAULT_MONGODB_URI } from "../lib/db/config";
+import { configureMongoDns, DEFAULT_MONGODB_URI } from "../lib/db/config";
 
 loadEnvConfig(process.cwd());
 
@@ -176,6 +176,7 @@ async function upsertDocuments(
 async function seed(): Promise<void> {
   const { isDevelopment, seedPrivilegedDemoUser } = getSeedSafety();
   const mongoUri = process.env.MONGODB_URI || DEFAULT_MONGODB_URI;
+  configureMongoDns(mongoUri);
   await mongoose.connect(mongoUri, {
     bufferCommands: false,
     serverSelectionTimeoutMS: 5_000,
@@ -285,7 +286,7 @@ async function seed(): Promise<void> {
     {
       _id: users.moderator,
       username: "proai-team",
-      phoneNumber: "+989124444444",
+      phoneNumber: "+989383091833",
       displayName: "تیم پروای‌آی",
       avatar: null,
       bio: "تیم نگه‌داری و راهنمای جامعه پروای‌آی.",
@@ -1817,7 +1818,7 @@ async function seed(): Promise<void> {
   ]);
 
   console.log("ProAI Persian development data seeded successfully.");
-  console.log("Accounts: 09121111111, 09122222222, 09123333333");
+  console.log("Accounts: 09121111111, 09122222222, 09123333333, 09383091833 (admin)");
   if (!isDevelopment) {
     if (!seedPrivilegedDemoUser) {
       console.log(

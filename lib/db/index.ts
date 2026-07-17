@@ -2,6 +2,7 @@ import "server-only";
 
 import mongoose from "mongoose";
 
+import { configureMongoDns } from "@/lib/db/config";
 import { getServerEnv } from "@/lib/env";
 
 type MongooseCache = {
@@ -25,7 +26,9 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     return cache.connection;
   }
 
-  cache.promise ??= mongoose.connect(getServerEnv().MONGODB_URI, {
+  const uri = getServerEnv().MONGODB_URI;
+  configureMongoDns(uri);
+  cache.promise ??= mongoose.connect(uri, {
     autoIndex: process.env.NODE_ENV !== "production",
     bufferCommands: false,
     maxPoolSize: 20,
