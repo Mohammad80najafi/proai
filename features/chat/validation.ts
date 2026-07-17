@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { MESSAGE_IMAGE_URL_PATTERN } from "@/lib/upload-paths";
+
 const objectIdSchema = z
   .string()
   .trim()
@@ -7,7 +9,7 @@ const objectIdSchema = z
 
 export const chatImageSchema = z
   .object({
-    url: z.string().regex(/^\/uploads\/messages\/[a-f\d-]+\.(?:png|jpe?g|webp)$/i),
+    url: z.string().regex(MESSAGE_IMAGE_URL_PATTERN),
     width: z.number().int().min(1).max(20_000).nullable().optional(),
     height: z.number().int().min(1).max(20_000).nullable().optional(),
   })

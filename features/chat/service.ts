@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 
 import { connectToDatabase } from "@/lib/db";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { MESSAGE_IMAGE_URL_PATTERN } from "@/lib/upload-paths";
 import { Conversation, ConversationMember, Message } from "@/models/Conversation";
 import { Notification } from "@/models/Notification";
 import { User } from "@/models/User";
@@ -62,7 +63,7 @@ export async function sendMessage({
         height: image.height ?? null,
       }
     : null;
-  if (cleanImage && !/^\/uploads\/messages\/[a-f\d-]+\.(?:png|jpe?g|webp)$/i.test(cleanImage.url)) {
+  if (cleanImage && !MESSAGE_IMAGE_URL_PATTERN.test(cleanImage.url)) {
     throw new Error("Invalid image");
   }
   if (clientNonce !== undefined && clientNonce !== null && typeof clientNonce !== "string") {

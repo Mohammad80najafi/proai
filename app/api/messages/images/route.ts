@@ -1,12 +1,9 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import { isConversationMember } from "@/features/chat/service";
 import { isSameOriginRequest } from "@/features/chat/validation";
 import { getOptionalUser } from "@/lib/auth/dal";
+import { storeUploadedImage } from "@/lib/uploads";
 
-const MAX_IMAGE_BYTES = 5_000_000;
+const MAX_IMAGE_BYTES = 4_000_000;
 
 function imageExtension(bytes: Uint8Array, type: string) {
   if (type === "image/png" && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "png";
@@ -55,9 +52,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "invalid image" }, { status: 415 });
   }
 
-  const directory = path.join(process.cwd(), "public", "uploads", "messages");
-  await mkdir(directory, { recursive: true });
-  const filename = `${randomUUID()}.${extension}`;
-  await writeFile(path.join(directory, filename), bytes, { flag: "wx" });
-  return Response.json({ url: `/uploads/messages/${filename}` }, { status: 201 });
+  const url = await storeUploadedImage("messages", extension, file.type, bytes);
+  return Response.json({ url }, { status: 201 });
 }

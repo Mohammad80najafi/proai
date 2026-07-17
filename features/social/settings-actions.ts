@@ -1,13 +1,11 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/auth/dal";
 import { connectToDatabase } from "@/lib/db";
+import { storeUploadedImage } from "@/lib/uploads";
 import { User } from "@/models/User";
 import type { ContentActionState } from "@/features/content/mutation-helpers";
 
@@ -31,11 +29,7 @@ export async function updateProfileAction(_state: ContentActionState, formData: 
     const bytes = new Uint8Array(await file.arrayBuffer());
     const extension = avatarExtension(bytes, file.type);
     if (!extension) return { status: "error", message: "فقط تصویر PNG، JPEG یا WebP معتبر پذیرفته می‌شود." };
-    const directory = path.join(process.cwd(), "public", "uploads", "avatars");
-    await mkdir(directory, { recursive: true });
-    const filename = `${randomUUID()}.${extension}`;
-    await writeFile(path.join(directory, filename), bytes, { flag: "wx" });
-    avatar = `/uploads/avatars/${filename}`;
+    avatar = await storeUploadedImage("avatars", extension, file.type, bytes);
   }
   try {
     await connectToDatabase();

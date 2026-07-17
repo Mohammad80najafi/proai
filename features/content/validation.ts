@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { CONTENT_IMAGE_URL_PATTERN } from "@/lib/upload-paths";
+
 const visibilitySchema = z.enum(["draft", "public", "unlisted"]);
 const licenseSchema = z.enum([
   "unspecified",
@@ -29,7 +31,7 @@ function parseImages(value: unknown) {
 }
 
 const contentImageSchema = z.object({
-  url: z.string().regex(/^\/uploads\/content\/[a-f\d-]+\.(?:png|jpe?g|webp)$/i, "نشانی تصویر معتبر نیست."),
+  url: z.string().regex(CONTENT_IMAGE_URL_PATTERN, "نشانی تصویر معتبر نیست."),
   alt: z.string().trim().max(200).default(""),
 });
 

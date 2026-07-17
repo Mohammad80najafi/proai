@@ -42,7 +42,7 @@ export function ContentImageUploader({
       );
       setImages((current) => [...current, ...uploaded].slice(0, MAX_IMAGES));
     } catch {
-      setError("بارگذاری تصویر انجام نشد. فایل PNG، JPG یا WebP تا حجم ۶ مگابایت انتخاب کنید.");
+      setError("بارگذاری تصویر انجام نشد. فایل PNG، JPG یا WebP تا حجم ۴ مگابایت انتخاب کنید.");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

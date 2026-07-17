@@ -199,8 +199,8 @@ export function ChatClient({
       setComposerError("فقط تصویر PNG، JPEG یا WebP قابل ارسال است.");
       return;
     }
-    if (file.size > 5_000_000) {
-      setComposerError("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
+    if (file.size > 4_000_000) {
+      setComposerError("حجم تصویر باید کمتر از ۴ مگابایت باشد.");
       return;
     }
     if (selectedImage) URL.revokeObjectURL(selectedImage.preview);
