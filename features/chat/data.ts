@@ -81,7 +81,7 @@ export async function getConversationList(userId: string): Promise<ChatConversat
   if (!memberships.length) return [];
   const ids = memberships.map((item) => String(item.conversationId));
   const [conversations, otherMembers] = await Promise.all([
-    Conversation.find({ _id: { $in: ids }, type: "direct", closedAt: null }).sort({ lastMessageAt: -1 }).lean<Array<{ _id: unknown; lastMessageId?: unknown | null; lastMessageAt?: Date | null }>>(),
+    Conversation.find({ _id: { $in: ids }, type: "direct", closedAt: null }).sort({ lastMessageAt: -1 }).lean<Array<{ _id: unknown; lastMessageId?: unknown | null; lastMessageAt?: Date | null; createdAt: Date }>>(),
     ConversationMember.find({ conversationId: { $in: ids }, userId: { $ne: userId }, leftAt: null }).select("conversationId userId").lean<Array<{ conversationId: unknown; userId: unknown }>>(),
   ]);
   const [users, lastMessages] = await Promise.all([
@@ -92,7 +92,7 @@ export async function getConversationList(userId: string): Promise<ChatConversat
   const userMap = new Map(users.map((item) => [String(item._id), userDTO(item)]));
   const messageMap = new Map(lastMessages.map((item) => [String(item._id), item.content || (item.image?.url ? "تصویر" : "گفت‌وگوی تازه")]));
   const unreadMap = new Map(memberships.map((item) => [String(item.conversationId), item.unreadCount]));
-  return conversations.flatMap((item) => { const participant = userMap.get(memberMap.get(String(item._id)) ?? ""); return participant ? [{ id: String(item._id), participant, lastMessage: messageMap.get(String(item.lastMessageId)) ?? "گفت‌وگوی تازه", lastMessageAt: (item.lastMessageAt ?? new Date(0)).toISOString(), unreadCount: unreadMap.get(String(item._id)) ?? 0, online: false }] : []; });
+  return conversations.flatMap((item) => { const participant = userMap.get(memberMap.get(String(item._id)) ?? ""); return participant ? [{ id: String(item._id), participant, lastMessage: messageMap.get(String(item.lastMessageId)) ?? "گفت‌وگوی تازه", lastMessageAt: (item.lastMessageAt ?? item.createdAt).toISOString(), unreadCount: unreadMap.get(String(item._id)) ?? 0, online: false }] : []; });
 }
 
 export async function getUnreadConversationIds(userId: string): Promise<string[]> {
